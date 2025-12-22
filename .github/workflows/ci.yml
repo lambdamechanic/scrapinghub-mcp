@@ -31,6 +31,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import tarfile
           import zipfile
 
           wheels = sorted(Path("dist").glob("scrapinghub_mcp-*-py3-none-any.whl"))
@@ -47,4 +48,19 @@ jobs:
           if not matches:
               raise SystemExit("Allowlist file missing from wheel.")
           print("Allowlist packaged:", matches[0])
+
+          sdists = sorted(Path("dist").glob("scrapinghub_mcp-*.tar.gz"))
+          if not sdists:
+              print("dist contents:", [p.name for p in Path("dist").glob("*")])
+              raise SystemExit("No sdist found in dist/")
+          sdist = sdists[-1]
+          with tarfile.open(sdist, "r:gz") as tf:
+              sdist_matches = [
+                  name
+                  for name in tf.getnames()
+                  if name.endswith("scrapinghub_mcp/scrapinghub-mcp.allowlist.yaml")
+              ]
+          if not sdist_matches:
+              raise SystemExit("Allowlist file missing from sdist.")
+          print("Allowlist packaged in sdist:", sdist_matches[0])
           PY

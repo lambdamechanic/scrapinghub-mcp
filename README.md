@@ -71,6 +71,9 @@ extra_non_mutating = ["projects.summary"]
 block_non_mutating = ["projects.summary"]
 ```
 
+Invalid `safety` values (wrong types or non-string list entries) will cause
+startup to fail with a clear error message.
+
 ```yaml
 non_mutating:
   - projects.list
