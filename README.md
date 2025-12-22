@@ -58,6 +58,14 @@ You can also extend the allowlist from `scrapinghub-mcp.toml` by setting
 you need to explicitly block entries, set `safety.block_non_mutating`—blocklist
 entries take precedence over the allowlist.
 
+Example (blocklist wins):
+
+```toml
+[safety]
+extra_non_mutating = ["projects.summary"]
+block_non_mutating = ["projects.summary"]
+```
+
 ```yaml
 non_mutating:
   - projects.list

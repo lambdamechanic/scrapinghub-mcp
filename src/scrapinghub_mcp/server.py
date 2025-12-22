@@ -112,61 +112,48 @@ def _parse_allowlist(content: str) -> set[str]:
     return set(non_mutating)
 
 
-def _load_allowlist_overrides() -> set[str]:
+def _load_safety_config() -> tuple[set[str], set[str]]:
     try:
         config_path = _resolve_config_path()
     except RuntimeError:
-        return set()
+        return set(), set()
 
     raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
     safety = raw.get("safety")
     if safety is None:
-        return set()
+        return set(), set()
     if not isinstance(safety, dict):
         raise RuntimeError("safety section in scrapinghub-mcp.toml must be a table.")
 
     extra = safety.get("extra_non_mutating")
     if extra is None:
-        return set()
-    if not isinstance(extra, list):
-        raise RuntimeError("safety.extra_non_mutating must be a list of strings.")
-
-    items = [item for item in extra if isinstance(item, str) and item.strip()]
-    if len(items) != len(extra):
-        raise RuntimeError("safety.extra_non_mutating must contain only strings.")
-    return set(items)
-
-
-def _load_allowlist_blocklist() -> set[str]:
-    try:
-        config_path = _resolve_config_path()
-    except RuntimeError:
-        return set()
-
-    raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
-    safety = raw.get("safety")
-    if safety is None:
-        return set()
-    if not isinstance(safety, dict):
-        raise RuntimeError("safety section in scrapinghub-mcp.toml must be a table.")
+        extra_items: set[str] = set()
+    else:
+        if not isinstance(extra, list):
+            raise RuntimeError("safety.extra_non_mutating must be a list of strings.")
+        extra_values = [item for item in extra if isinstance(item, str) and item.strip()]
+        if len(extra_values) != len(extra):
+            raise RuntimeError("safety.extra_non_mutating must contain only strings.")
+        extra_items = set(extra_values)
 
     block = safety.get("block_non_mutating")
     if block is None:
-        return set()
-    if not isinstance(block, list):
-        raise RuntimeError("safety.block_non_mutating must be a list of strings.")
+        block_items: set[str] = set()
+    else:
+        if not isinstance(block, list):
+            raise RuntimeError("safety.block_non_mutating must be a list of strings.")
+        block_values = [item for item in block if isinstance(item, str) and item.strip()]
+        if len(block_values) != len(block):
+            raise RuntimeError("safety.block_non_mutating must contain only strings.")
+        block_items = set(block_values)
 
-    items = [item for item in block if isinstance(item, str) and item.strip()]
-    if len(items) != len(block):
-        raise RuntimeError("safety.block_non_mutating must contain only strings.")
-    return set(items)
+    return extra_items, block_items
 
 
 def load_non_mutating_operations() -> set[str]:
     content, source = _load_allowlist_content()
     operations = _parse_allowlist(content)
-    overrides = _load_allowlist_overrides()
-    blocklist = _load_allowlist_blocklist()
+    overrides, blocklist = _load_safety_config()
     merged = (operations | overrides) - blocklist
     logger.info(
         "allowlist.loaded",

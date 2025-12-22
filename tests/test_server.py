@@ -244,6 +244,23 @@ def test_load_non_mutating_operations_from_cwd_config(tmp_path: Path, monkeypatc
     assert operations == {"projects.list", "projects.summary"}
 
 
+def test_load_non_mutating_operations_from_cwd_blocklist(tmp_path: Path, monkeypatch: Any) -> None:
+    cwd_root = tmp_path / "cwd"
+    cwd_root.mkdir()
+    (cwd_root / "scrapinghub-mcp.toml").write_text(
+        '[safety]\nblock_non_mutating = ["projects.summary"]\n', encoding="utf-8"
+    )
+    (cwd_root / ".git").mkdir()
+    (cwd_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+        "non_mutating:\n  - projects.list\n  - projects.summary\n", encoding="utf-8"
+    )
+    monkeypatch.chdir(cwd_root)
+
+    operations = server.load_non_mutating_operations()
+
+    assert operations == {"projects.list"}
+
+
 def test_load_non_mutating_operations_uses_package_resource(monkeypatch: Any) -> None:
     monkeypatch.chdir(Path.cwd())
     operations = server.load_non_mutating_operations()
