@@ -35,8 +35,5 @@ select = ["E", "F", "I"]
 [tool.ruff.format]
 line-ending = "lf"
 
-[tool.ty]
-python-version = "3.11"
-
 [tool.uv]
 package = true

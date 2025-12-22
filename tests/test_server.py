@@ -12,7 +12,8 @@ class DummyMCP:
 
     def tool(self, name: str | None = None) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            self.tool_registry[name or func.__name__] = func
+            func_name = getattr(func, "__name__", "tool")
+            self.tool_registry[name or func_name] = func
             return func
 
         return decorator
