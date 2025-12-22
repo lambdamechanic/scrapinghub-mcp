@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable, Protocol, TypeVar, cast
 
+import structlog
 from fastmcp import FastMCP
 from scrapinghub import ScrapinghubClient
 
@@ -20,10 +21,12 @@ MCPType = TypeVar("MCPType", bound=MCPProtocol)
 
 API_KEY_ENV = "SCRAPINGHUB_API_KEY"
 # TODO: Expand with mutating vs non-mutating split once gating is implemented.
+# bd task: scrapinghub-mcp-q0h.4
 ALLOWED_METHODS: dict[str, str] = {
     "list_projects": "projects.list",
     "project_summary": "projects.summary",
 }
+logger = structlog.get_logger(__name__)
 
 
 def resolve_api_key() -> str:
@@ -46,10 +49,15 @@ def register_scrapinghub_tools(mcp: MCPType, client: Any) -> None:
     for tool_name, method_name in ALLOWED_METHODS.items():
         method = resolve_method(client, method_name)
         if method is None:
+            logger.warning("tool.missing", tool=tool_name, method=method_name)
             continue
 
         def tool_wrapper(*args: Any, _method: Callable[..., Any] = method, **kwargs: Any) -> Any:
-            result = _method(*args, **kwargs)
+            try:
+                result = _method(*args, **kwargs)
+            except Exception:
+                logger.exception("tool.failed", tool=tool_name, method=method_name)
+                raise
             if isinstance(result, (str, bytes, dict)):
                 return result
             if hasattr(result, "__iter__"):
@@ -57,6 +65,7 @@ def register_scrapinghub_tools(mcp: MCPType, client: Any) -> None:
             return result
 
         mcp.tool(name=tool_name)(tool_wrapper)
+        logger.info("tool.registered", tool=tool_name, method=method_name)
 
 
 def build_server(mcp_cls: type[MCPType] | None = None) -> MCPType:
