@@ -136,3 +136,12 @@ def test_missing_api_key_error_includes_docs_link(tmp_path: Path, monkeypatch: A
         resolve_api_key(start_path)
 
     assert "https://github.com/lambdamechanic/scrapinghub-mcp" in str(excinfo.value)
+
+
+def test_resolve_api_key_env_only_without_config(tmp_path: Path, monkeypatch: Any) -> None:
+    start_path = tmp_path / "install" / "scrapinghub_mcp"
+    start_path.mkdir(parents=True)
+
+    monkeypatch.setenv("SCRAPINGHUB_API_KEY", "env-key")
+
+    assert resolve_api_key(start_path) == "env-key"

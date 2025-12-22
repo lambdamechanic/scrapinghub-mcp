@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import tomllib
 from pathlib import Path
 from typing import Any, Callable, Protocol, TypeVar, cast
@@ -47,9 +48,7 @@ def _find_parent_with_dir(start: Path, dirname: str) -> Path | None:
 
 
 def _resolve_config_path(start_path: Path | None = None) -> Path:
-    search_roots = (
-        [start_path] if start_path is not None else [Path(__file__).resolve(), Path.cwd()]
-    )
+    search_roots = [start_path] if start_path is not None else [Path.cwd()]
 
     for search_root in search_roots:
         if search_root is None:
@@ -89,6 +88,8 @@ def _load_auth_config(config_path: Path) -> tuple[str | None, str | None]:
 
 
 def resolve_api_key(start_path: Path | None = None) -> str:
+    if start_path is None:
+        print(f"scrapinghub-mcp: using working directory {Path.cwd()}", file=sys.stderr)
     try:
         config_path = _resolve_config_path(start_path)
     except RuntimeError:
@@ -96,7 +97,8 @@ def resolve_api_key(start_path: Path | None = None) -> str:
         if api_key:
             return api_key
         raise RuntimeError(
-            f"Missing {CONFIG_NAME} and {API_KEY_ENV}. See {DOCS_URL} for setup."
+            f"Missing {CONFIG_NAME} and {API_KEY_ENV}. "
+            f"Create {CONFIG_NAME} or set {API_KEY_ENV}. See {DOCS_URL} for setup."
         ) from None
 
     api_key, env_file = _load_auth_config(config_path)
@@ -111,7 +113,8 @@ def resolve_api_key(start_path: Path | None = None) -> str:
     api_key = os.environ.get(API_KEY_ENV)
     if not api_key:
         raise RuntimeError(
-            f"Missing API key in {CONFIG_NAME} or {API_KEY_ENV}. See {DOCS_URL} for setup."
+            f"Missing API key in {CONFIG_NAME} and {API_KEY_ENV}. "
+            f"Set auth.api_key or {API_KEY_ENV}. See {DOCS_URL} for setup."
         )
     return api_key
 
@@ -148,8 +151,8 @@ def register_scrapinghub_tools(mcp: MCPType, client: Any) -> None:
         logger.info("tool.registered", tool=tool_name, method=method_name)
 
 
-def build_server(mcp_cls: type[MCPType] | None = None) -> MCPType:
-    api_key = resolve_api_key()
+def build_server(mcp_cls: type[MCPType] | None = None, working_dir: Path | None = None) -> MCPType:
+    api_key = resolve_api_key(working_dir)
     cls = cast(type[MCPType], FastMCP) if mcp_cls is None else mcp_cls
     mcp = cls("scrapinghub-mcp")
     client = cast(Any, ScrapinghubClient(api_key))
