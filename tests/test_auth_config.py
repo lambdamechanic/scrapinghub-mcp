@@ -29,8 +29,9 @@ def test_resolve_api_key_prefers_package_root(tmp_path: Path, monkeypatch: Any) 
     )
 
     monkeypatch.delenv("SCRAPINGHUB_API_KEY", raising=False)
+    monkeypatch.chdir(start_path)
 
-    assert resolve_api_key(start_path) == "package-key"
+    assert resolve_api_key() == "package-key"
 
 
 def test_resolve_api_key_falls_back_to_repo_root(tmp_path: Path, monkeypatch: Any) -> None:
@@ -46,8 +47,9 @@ def test_resolve_api_key_falls_back_to_repo_root(tmp_path: Path, monkeypatch: An
     )
 
     monkeypatch.delenv("SCRAPINGHUB_API_KEY", raising=False)
+    monkeypatch.chdir(start_path)
 
-    assert resolve_api_key(start_path) == "repo-key"
+    assert resolve_api_key() == "repo-key"
 
 
 def test_resolve_api_key_loads_env_file(tmp_path: Path, monkeypatch: Any) -> None:
@@ -67,8 +69,9 @@ def test_resolve_api_key_loads_env_file(tmp_path: Path, monkeypatch: Any) -> Non
     )
 
     monkeypatch.delenv("SCRAPINGHUB_API_KEY", raising=False)
+    monkeypatch.chdir(start_path)
 
-    assert resolve_api_key(start_path) == "env-key"
+    assert resolve_api_key() == "env-key"
 
 
 def test_resolve_api_key_uses_env_when_env_file_missing(tmp_path: Path, monkeypatch: Any) -> None:
@@ -84,8 +87,9 @@ def test_resolve_api_key_uses_env_when_env_file_missing(tmp_path: Path, monkeypa
     )
 
     monkeypatch.setenv("SCRAPINGHUB_API_KEY", "env-key")
+    monkeypatch.chdir(start_path)
 
-    assert resolve_api_key(start_path) == "env-key"
+    assert resolve_api_key() == "env-key"
 
 
 def test_resolve_api_key_prefers_config_over_env_file(tmp_path: Path, monkeypatch: Any) -> None:
@@ -105,8 +109,9 @@ def test_resolve_api_key_prefers_config_over_env_file(tmp_path: Path, monkeypatc
     )
 
     monkeypatch.setenv("SCRAPINGHUB_API_KEY", "env-key")
+    monkeypatch.chdir(start_path)
 
-    assert resolve_api_key(start_path) == "config-key"
+    assert resolve_api_key() == "config-key"
 
 
 def test_resolve_api_key_errors_when_config_missing(tmp_path: Path, monkeypatch: Any) -> None:
@@ -114,9 +119,10 @@ def test_resolve_api_key_errors_when_config_missing(tmp_path: Path, monkeypatch:
     start_path.mkdir(parents=True)
 
     monkeypatch.delenv("SCRAPINGHUB_API_KEY", raising=False)
+    monkeypatch.chdir(start_path)
 
     with pytest.raises(RuntimeError) as excinfo:
-        resolve_api_key(start_path)
+        resolve_api_key()
 
     assert "https://github.com/lambdamechanic/scrapinghub-mcp" in str(excinfo.value)
 
@@ -131,9 +137,10 @@ def test_missing_api_key_error_includes_docs_link(tmp_path: Path, monkeypatch: A
     _write_config(package_root / "scrapinghub-mcp.toml", "[auth]\napi_key = ''\n")
 
     monkeypatch.delenv("SCRAPINGHUB_API_KEY", raising=False)
+    monkeypatch.chdir(start_path)
 
     with pytest.raises(RuntimeError) as excinfo:
-        resolve_api_key(start_path)
+        resolve_api_key()
 
     assert "https://github.com/lambdamechanic/scrapinghub-mcp" in str(excinfo.value)
 
@@ -143,5 +150,20 @@ def test_resolve_api_key_env_only_without_config(tmp_path: Path, monkeypatch: An
     start_path.mkdir(parents=True)
 
     monkeypatch.setenv("SCRAPINGHUB_API_KEY", "env-key")
+    monkeypatch.chdir(start_path)
 
-    assert resolve_api_key(start_path) == "env-key"
+    assert resolve_api_key() == "env-key"
+
+
+def test_resolve_api_key_uses_cwd_config(tmp_path: Path, monkeypatch: Any) -> None:
+    config_root = tmp_path / "config"
+    config_root.mkdir()
+    _write_config(
+        config_root / "scrapinghub-mcp.toml",
+        "[auth]\napi_key = 'cwd-key'\n",
+    )
+
+    monkeypatch.delenv("SCRAPINGHUB_API_KEY", raising=False)
+    monkeypatch.chdir(config_root)
+
+    assert resolve_api_key() == "cwd-key"

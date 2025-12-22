@@ -20,7 +20,7 @@ class DummyMCP:
 
 
 def test_build_server_registers_tool(monkeypatch: Any) -> None:
-    monkeypatch.setattr(server, "resolve_api_key", lambda *_: "test-key")
+    monkeypatch.setattr(server, "resolve_api_key", lambda: "test-key")
     built_server = server.build_server(DummyMCP)
 
     assert isinstance(built_server, DummyMCP)

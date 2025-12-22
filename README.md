@@ -2,9 +2,19 @@
 
 ## Installed usage
 
-When installed via `pip` or `uv`, the server looks for `scrapinghub-mcp.toml` in the
-current working directory. If no config file is present, it falls back to the
-`SCRAPINGHUB_API_KEY` environment variable.
+When installed via `pip` or `uv`, start the stdio MCP server with `shub-mcp`
+(the CLI entry point for the `scrapinghub-mcp` server over stdio).
+We expect installed usage; repo-local behavior is dev scaffolding only.
+
+```bash
+export SCRAPINGHUB_API_KEY="..."
+shub-mcp
+```
+
+The server first looks for `scrapinghub-mcp.toml` in the current working
+directory, then falls back to package or repo roots during development. If no
+config file is present, it falls back to the `SCRAPINGHUB_API_KEY` environment
+variable.
 
 Use `scrapinghub-mcp.toml` with an `[auth]` table:
 

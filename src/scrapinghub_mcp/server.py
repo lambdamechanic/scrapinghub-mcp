@@ -47,30 +47,23 @@ def _find_parent_with_dir(start: Path, dirname: str) -> Path | None:
     return None
 
 
-def _resolve_config_path(start_path: Path | None = None) -> Path:
-    search_roots = [start_path] if start_path is not None else [Path.cwd()]
+def _resolve_config_path() -> Path:
+    search_root = Path.cwd()
+    direct_path = search_root / CONFIG_NAME
+    if direct_path.is_file():
+        return direct_path
 
-    for search_root in search_roots:
-        if search_root is None:
-            continue
-        if search_root.is_file():
-            search_root = search_root.parent
+    package_root = _find_parent_with_file(search_root, "pyproject.toml")
+    if package_root is not None:
+        config_path = package_root / CONFIG_NAME
+        if config_path.is_file():
+            return config_path
 
-        direct_path = search_root / CONFIG_NAME
-        if direct_path.is_file():
-            return direct_path
-
-        package_root = _find_parent_with_file(search_root, "pyproject.toml")
-        if package_root is not None:
-            config_path = package_root / CONFIG_NAME
-            if config_path.is_file():
-                return config_path
-
-        repo_root = _find_parent_with_dir(search_root, ".git")
-        if repo_root is not None:
-            config_path = repo_root / CONFIG_NAME
-            if config_path.is_file():
-                return config_path
+    repo_root = _find_parent_with_dir(search_root, ".git")
+    if repo_root is not None:
+        config_path = repo_root / CONFIG_NAME
+        if config_path.is_file():
+            return config_path
 
     raise RuntimeError(f"Missing {CONFIG_NAME}. See {DOCS_URL} for setup.")
 
@@ -87,11 +80,10 @@ def _load_auth_config(config_path: Path) -> tuple[str | None, str | None]:
     return (api_key_value or None, env_file_value or None)
 
 
-def resolve_api_key(start_path: Path | None = None) -> str:
-    if start_path is None:
-        print(f"scrapinghub-mcp: using working directory {Path.cwd()}", file=sys.stderr)
+def resolve_api_key() -> str:
+    print(f"scrapinghub-mcp: using working directory {Path.cwd()}", file=sys.stderr)
     try:
-        config_path = _resolve_config_path(start_path)
+        config_path = _resolve_config_path()
     except RuntimeError:
         api_key = os.environ.get(API_KEY_ENV)
         if api_key:
@@ -151,8 +143,8 @@ def register_scrapinghub_tools(mcp: MCPType, client: Any) -> None:
         logger.info("tool.registered", tool=tool_name, method=method_name)
 
 
-def build_server(mcp_cls: type[MCPType] | None = None, working_dir: Path | None = None) -> MCPType:
-    api_key = resolve_api_key(working_dir)
+def build_server(mcp_cls: type[MCPType] | None = None) -> MCPType:
+    api_key = resolve_api_key()
     cls = cast(type[MCPType], FastMCP) if mcp_cls is None else mcp_cls
     mcp = cls("scrapinghub-mcp")
     client = cast(Any, ScrapinghubClient(api_key))
