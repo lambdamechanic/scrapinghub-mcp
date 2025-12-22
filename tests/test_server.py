@@ -107,9 +107,7 @@ def test_parse_mutations_rejects_missing_list() -> None:
         raise AssertionError("Expected RuntimeError for missing non_mutating list.")
 
 
-def test_load_non_mutating_operations_uses_repo_override(
-    tmp_path: Path, monkeypatch: Any
-) -> None:
+def test_load_non_mutating_operations_uses_repo_override(tmp_path: Path, monkeypatch: Any) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     (repo_root / ".git").mkdir()

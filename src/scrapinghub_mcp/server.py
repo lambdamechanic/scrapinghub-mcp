@@ -198,9 +198,7 @@ def register_scrapinghub_tools(
         logger.info("tool.registered", tool=tool_name, method=method_name)
 
 
-def build_server(
-    *, allow_mutate: bool = False, mcp_cls: type[MCPType] | None = None
-) -> MCPType:
+def build_server(*, allow_mutate: bool = False, mcp_cls: type[MCPType] | None = None) -> MCPType:
     api_key = resolve_api_key()
     cls = cast(type[MCPType], FastMCP) if mcp_cls is None else mcp_cls
     mcp = cls("scrapinghub-mcp")
