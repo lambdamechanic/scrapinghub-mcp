@@ -68,20 +68,14 @@ jobs:
           print("Allowlist packaged in sdist:", sdist_allowlist_path)
           sdist_content = tf.extractfile(sdist_allowlist_path).read().decode("utf-8")
 
+          import json
           import jsonschema
           import yaml
 
-          schema = {
-              "type": "object",
-              "properties": {
-                  "non_mutating": {
-                      "type": "array",
-                      "items": {"type": "string", "minLength": 1},
-                  }
-              },
-              "required": ["non_mutating"],
-              "additionalProperties": False,
-          }
+          schema_path = Path("src/scrapinghub_mcp/allowlist-schema.json")
+          if not schema_path.is_file():
+              raise SystemExit(f"Missing schema file at {schema_path}")
+          schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
           for content in (allowlist_content, sdist_content):
               data = yaml.safe_load(content) or {}

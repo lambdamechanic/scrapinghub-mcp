@@ -106,12 +106,32 @@ def test_parse_mutations_allows_empty_non_mutating_list() -> None:
     assert operations == set()
 
 
+def test_parse_mutations_rejects_missing_non_mutating_list() -> None:
+    content = "other: []\n"
+    try:
+        server._parse_allowlist(content)
+    except RuntimeError as exc:
+        assert "is invalid" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for missing non_mutating list.")
+
+
+def test_parse_mutations_rejects_extra_keys() -> None:
+    content = "non_mutating: []\nextra: []\n"
+    try:
+        server._parse_allowlist(content)
+    except RuntimeError as exc:
+        assert "is invalid" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for extra allowlist keys.")
+
+
 def test_parse_mutations_rejects_missing_list() -> None:
     content = "not_mutations: []\n"
     try:
         server._parse_allowlist(content)
     except RuntimeError as exc:
-        assert "non_mutating" in str(exc)
+        assert "is invalid" in str(exc)
     else:
         raise AssertionError("Expected RuntimeError for missing non_mutating list.")
 

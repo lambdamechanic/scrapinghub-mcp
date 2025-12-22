@@ -65,6 +65,8 @@ non_mutating:
   - projects.list
 ```
 
+The packaged allowlist lives at `scrapinghub_mcp/scrapinghub-mcp.allowlist.yaml`.
+
 You can also extend the allowlist from `scrapinghub-mcp.toml` by setting
 `safety.extra_non_mutating` to a list of additional operation identifiers. If
 you need to explicitly block entries, set `safety.block_non_mutating`—blocklist

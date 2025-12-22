@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 import tomllib
@@ -29,17 +30,7 @@ MCPType = TypeVar("MCPType", bound=MCPProtocol)
 API_KEY_ENV = "SCRAPINGHUB_API_KEY"
 DOCS_URL = "https://github.com/lambdamechanic/scrapinghub-mcp"
 ALLOWLIST_FILENAME = "scrapinghub-mcp.allowlist.yaml"
-ALLOWLIST_SCHEMA: dict[str, object] = {
-    "type": "object",
-    "properties": {
-        "non_mutating": {
-            "type": "array",
-            "items": {"type": "string", "minLength": 1},
-        }
-    },
-    "required": ["non_mutating"],
-    "additionalProperties": False,
-}
+ALLOWLIST_SCHEMA_FILENAME = "allowlist-schema.json"
 ALLOWED_METHODS: dict[str, str] = {
     "list_projects": "projects.list",
     "project_summary": "projects.summary",
@@ -105,6 +96,15 @@ def _load_allowlist_content() -> tuple[str, str]:
         raise RuntimeError(f"Missing {ALLOWLIST_FILENAME}. See {DOCS_URL} for setup.") from exc
 
 
+def _load_allowlist_schema() -> dict[str, object]:
+    try:
+        resource = resources.files("scrapinghub_mcp").joinpath(ALLOWLIST_SCHEMA_FILENAME)
+        content = resource.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"Missing {ALLOWLIST_SCHEMA_FILENAME}.") from exc
+    return json.loads(content)
+
+
 def _parse_allowlist(content: str) -> set[str]:
     try:
         payload = yaml.safe_load(content) or {}
@@ -113,7 +113,8 @@ def _parse_allowlist(content: str) -> set[str]:
     if not isinstance(payload, dict):
         raise RuntimeError(f"{ALLOWLIST_FILENAME} must define a mapping.")
     try:
-        jsonschema.validate(payload, ALLOWLIST_SCHEMA)
+        schema = _load_allowlist_schema()
+        jsonschema.validate(payload, schema)
     except jsonschema.ValidationError as exc:
         raise RuntimeError(f"{ALLOWLIST_FILENAME} is invalid: {exc.message}") from exc
 
