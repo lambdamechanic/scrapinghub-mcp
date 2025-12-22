@@ -42,7 +42,8 @@ Non-mutating operations are whitelisted in `scrapinghub-mcp.allowlist.yaml`,
 which is bundled with the package. During development, you can override it by
 placing a `scrapinghub-mcp.allowlist.yaml` file at the repository root
 (directory containing `.git`). When the override is present, it takes
-precedence over the packaged file.
+precedence over the packaged file. If you are running outside a git repository,
+only the packaged allowlist is used.
 
 ```yaml
 non_mutating:

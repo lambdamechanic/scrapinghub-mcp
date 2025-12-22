@@ -20,7 +20,7 @@ The server SHALL define non-mutating operations via an explicit static mapping l
 - **WHEN** the server registers API operations
 - **THEN** mutating operations are classified as any operation not listed in `scrapinghub-mcp.allowlist.yaml`
 
-### Requirement: Mutations File Format
+### Requirement: Allowlist File Format
 The `scrapinghub-mcp.allowlist.yaml` file SHALL contain a top-level `non_mutating` list of operation identifiers, for example:
 ```
 non_mutating:
@@ -28,17 +28,17 @@ non_mutating:
   - projects.summary
 ```
 
-#### Scenario: Parse mutations file
+#### Scenario: Parse allowlist file
 - **WHEN** the server loads `scrapinghub-mcp.allowlist.yaml`
 - **THEN** it reads the `non_mutating` list to determine non-mutating operations
 
-### Requirement: Mutations File Location
+### Requirement: Allowlist File Location
 The server SHALL load `scrapinghub-mcp.allowlist.yaml` from the package resources and SHALL allow a repository root (directory containing `.git`) override when present.
 
-#### Scenario: Resolve mutations file from package resources
+#### Scenario: Resolve allowlist file from package resources
 - **WHEN** the server runs without a repository override file
 - **THEN** it loads the packaged `scrapinghub-mcp.allowlist.yaml` resource
 
-#### Scenario: Resolve mutations file from repository root
+#### Scenario: Resolve allowlist file from repository root
 - **WHEN** `scrapinghub-mcp.allowlist.yaml` exists in the repository root
 - **THEN** the server loads the repository root file instead of the package resource

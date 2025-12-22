@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing
+from importlib import resources
 from pathlib import Path
 from typing import Any, Callable
 
@@ -115,6 +116,16 @@ def test_parse_mutations_rejects_missing_list() -> None:
         raise AssertionError("Expected RuntimeError for missing non_mutating list.")
 
 
+def test_parse_mutations_rejects_non_string_items() -> None:
+    content = "non_mutating:\n  - projects.list\n  - 123\n"
+    try:
+        server._parse_allowlist(content)
+    except RuntimeError as exc:
+        assert "non_mutating list must be strings" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for non-string allowlist entries.")
+
+
 def test_load_non_mutating_operations_uses_repo_override(tmp_path: Path, monkeypatch: Any) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -134,3 +145,18 @@ def test_load_non_mutating_operations_uses_package_resource(monkeypatch: Any) ->
     operations = server.load_non_mutating_operations()
 
     assert operations == {"projects.list", "projects.summary"}
+
+
+def test_load_non_mutating_operations_missing_file(monkeypatch: Any) -> None:
+    monkeypatch.setattr(server, "ALLOWLIST_FILENAME", "missing-allowlist.yaml")
+    try:
+        server.load_non_mutating_operations()
+    except RuntimeError as exc:
+        assert "missing-allowlist.yaml" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for missing allowlist file.")
+
+
+def test_packaged_allowlist_exists() -> None:
+    resource = resources.files("scrapinghub_mcp").joinpath(server.ALLOWLIST_FILENAME)
+    assert resource.is_file()

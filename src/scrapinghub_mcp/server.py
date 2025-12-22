@@ -115,7 +115,7 @@ def _parse_allowlist(content: str) -> set[str]:
 def load_non_mutating_operations() -> set[str]:
     content, source = _load_allowlist_content()
     operations = _parse_allowlist(content)
-    logger.info("mutations.loaded", source=source, count=len(operations))
+    logger.info("allowlist.loaded", source=source, count=len(operations))
     return operations
 
 
