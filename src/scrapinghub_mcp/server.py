@@ -24,7 +24,6 @@ MCPType = TypeVar("MCPType", bound=MCPProtocol)
 
 
 API_KEY_ENV = "SCRAPINGHUB_API_KEY"
-CONFIG_NAME = "scrapinghub-mcp.toml"
 DOCS_URL = "https://github.com/lambdamechanic/scrapinghub-mcp"
 ALLOWED_METHODS: dict[str, str] = {
     "list_projects": "projects.list",
@@ -33,39 +32,32 @@ ALLOWED_METHODS: dict[str, str] = {
 logger = structlog.get_logger(__name__)
 
 
-def _find_parent_with_file(start: Path, filename: str) -> Path | None:
+def _find_parent(start: Path, predicate: Callable[[Path], bool]) -> Path | None:
     for parent in (start, *start.parents):
-        if (parent / filename).is_file():
-            return parent
-    return None
-
-
-def _find_parent_with_dir(start: Path, dirname: str) -> Path | None:
-    for parent in (start, *start.parents):
-        if (parent / dirname).is_dir():
+        if predicate(parent):
             return parent
     return None
 
 
 def _resolve_config_path() -> Path:
     search_root = Path.cwd()
-    direct_path = search_root / CONFIG_NAME
+    direct_path = search_root / "scrapinghub-mcp.toml"
     if direct_path.is_file():
         return direct_path
 
-    package_root = _find_parent_with_file(search_root, "pyproject.toml")
+    package_root = _find_parent(search_root, lambda root: (root / "pyproject.toml").is_file())
     if package_root is not None:
-        config_path = package_root / CONFIG_NAME
+        config_path = package_root / "scrapinghub-mcp.toml"
         if config_path.is_file():
             return config_path
 
-    repo_root = _find_parent_with_dir(search_root, ".git")
+    repo_root = _find_parent(search_root, lambda root: (root / ".git").is_dir())
     if repo_root is not None:
-        config_path = repo_root / CONFIG_NAME
+        config_path = repo_root / "scrapinghub-mcp.toml"
         if config_path.is_file():
             return config_path
 
-    raise RuntimeError(f"Missing {CONFIG_NAME}. See {DOCS_URL} for setup.")
+    raise RuntimeError(f"Missing scrapinghub-mcp.toml. See {DOCS_URL} for setup.")
 
 
 def _load_auth_config(config_path: Path) -> tuple[str | None, str | None]:
@@ -89,23 +81,25 @@ def resolve_api_key() -> str:
         if api_key:
             return api_key
         raise RuntimeError(
-            f"Missing {CONFIG_NAME} and {API_KEY_ENV}. "
-            f"Create {CONFIG_NAME} or set {API_KEY_ENV}. See {DOCS_URL} for setup."
+            f"Missing scrapinghub-mcp.toml and {API_KEY_ENV}. "
+            f"Create scrapinghub-mcp.toml or set {API_KEY_ENV}. See {DOCS_URL} for setup."
         ) from None
 
     api_key, env_file = _load_auth_config(config_path)
 
     if env_file:
         env_path = (config_path.parent / env_file).resolve()
+        logger.info("auth.env_file.load", path=str(env_path))
         load_dotenv(env_path)
 
     if api_key:
         return api_key
 
+    logger.info("auth.api_key.fallback", source="env")
     api_key = os.environ.get(API_KEY_ENV)
     if not api_key:
         raise RuntimeError(
-            f"Missing API key in {CONFIG_NAME} and {API_KEY_ENV}. "
+            f"Missing API key in scrapinghub-mcp.toml and {API_KEY_ENV}. "
             f"Set auth.api_key or {API_KEY_ENV}. See {DOCS_URL} for setup."
         )
     return api_key
