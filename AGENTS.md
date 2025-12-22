@@ -33,3 +33,7 @@ For full workflow details: `bd prime`
 ## Python Typing
 
 All Python functions are expected to include type declarations for parameters and return types.
+
+## Quality Gates
+
+Always run tests locally (via `uv run -- pytest`) before committing changes.
