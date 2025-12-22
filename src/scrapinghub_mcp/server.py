@@ -20,8 +20,6 @@ MCPType = TypeVar("MCPType", bound=MCPProtocol)
 
 
 API_KEY_ENV = "SCRAPINGHUB_API_KEY"
-# TODO: Expand with mutating vs non-mutating split once gating is implemented.
-# bd task: scrapinghub-mcp-q0h.4
 ALLOWED_METHODS: dict[str, str] = {
     "list_projects": "projects.list",
     "project_summary": "projects.summary",
@@ -55,9 +53,9 @@ def register_scrapinghub_tools(mcp: MCPType, client: Any) -> None:
         def tool_wrapper(*args: Any, _method: Callable[..., Any] = method, **kwargs: Any) -> Any:
             try:
                 result = _method(*args, **kwargs)
-            except Exception:
+            except Exception as exc:
                 logger.exception("tool.failed", tool=tool_name, method=method_name)
-                raise
+                raise RuntimeError(f"Scrapinghub tool '{tool_name}' failed.") from exc
             if isinstance(result, (str, bytes, dict)):
                 return result
             if hasattr(result, "__iter__"):
