@@ -31,6 +31,7 @@ API_KEY_ENV = "SCRAPINGHUB_API_KEY"
 DOCS_URL = "https://github.com/lambdamechanic/scrapinghub-mcp"
 ALLOWLIST_FILENAME = "scrapinghub-mcp.allowlist.yaml"
 ALLOWLIST_SCHEMA_FILENAME = "allowlist-schema.json"
+_ALLOWLIST_SCHEMA: dict[str, object] | None = None
 ALLOWED_METHODS: dict[str, str] = {
     "list_projects": "projects.list",
     "project_summary": "projects.summary",
@@ -97,12 +98,16 @@ def _load_allowlist_content() -> tuple[str, str]:
 
 
 def _load_allowlist_schema() -> dict[str, object]:
+    global _ALLOWLIST_SCHEMA
+    if _ALLOWLIST_SCHEMA is not None:
+        return _ALLOWLIST_SCHEMA
     try:
         resource = resources.files("scrapinghub_mcp").joinpath(ALLOWLIST_SCHEMA_FILENAME)
         content = resource.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise RuntimeError(f"Missing {ALLOWLIST_SCHEMA_FILENAME}.") from exc
-    return json.loads(content)
+    _ALLOWLIST_SCHEMA = json.loads(content)
+    return _ALLOWLIST_SCHEMA
 
 
 def _parse_allowlist(content: str) -> set[str]:

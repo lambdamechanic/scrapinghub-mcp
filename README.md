@@ -66,6 +66,7 @@ non_mutating:
 ```
 
 The packaged allowlist lives at `scrapinghub_mcp/scrapinghub-mcp.allowlist.yaml`.
+The allowlist schema lives at `scrapinghub_mcp/allowlist-schema.json`.
 
 You can also extend the allowlist from `scrapinghub-mcp.toml` by setting
 `safety.extra_non_mutating` to a list of additional operation identifiers. If
