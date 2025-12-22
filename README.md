@@ -53,6 +53,10 @@ only the packaged allowlist is used. This asymmetry is intentional so that
 installed users can extend the allowlist via config without overriding the
 packaged baseline.
 
+The allowlist file itself is required even when `safety.extra_non_mutating` or
+`safety.block_non_mutating` are set; config entries only adjust the packaged or
+override allowlist.
+
 You can also extend the allowlist from `scrapinghub-mcp.toml` by setting
 `safety.extra_non_mutating` to a list of additional operation identifiers. If
 you need to explicitly block entries, set `safety.block_non_mutating`—blocklist

@@ -191,6 +191,28 @@ def test_load_non_mutating_operations_rejects_invalid_config(
         raise AssertionError("Expected RuntimeError for invalid safety config.")
 
 
+def test_load_non_mutating_operations_rejects_invalid_blocklist(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    )
+    (repo_root / "scrapinghub-mcp.toml").write_text(
+        '[safety]\nblock_non_mutating = "projects.summary"\n', encoding="utf-8"
+    )
+    monkeypatch.chdir(repo_root)
+
+    try:
+        server.load_non_mutating_operations()
+    except RuntimeError as exc:
+        assert "block_non_mutating" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for invalid blocklist config.")
+
+
 def test_load_non_mutating_operations_blocks_entries(tmp_path: Path, monkeypatch: Any) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -259,6 +281,26 @@ def test_load_non_mutating_operations_from_cwd_blocklist(tmp_path: Path, monkeyp
     operations = server.load_non_mutating_operations()
 
     assert operations == {"projects.list"}
+
+
+def test_load_non_mutating_operations_from_package_root(tmp_path: Path, monkeypatch: Any) -> None:
+    pkg_root = tmp_path / "pkg"
+    pkg_root.mkdir()
+    (pkg_root / "pyproject.toml").write_text('[project]\nname = "dummy"\n')
+    (pkg_root / "scrapinghub-mcp.toml").write_text(
+        '[safety]\nextra_non_mutating = ["projects.summary"]\n', encoding="utf-8"
+    )
+    (pkg_root / ".git").mkdir()
+    (pkg_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    )
+    nested = pkg_root / "subdir"
+    nested.mkdir()
+    monkeypatch.chdir(nested)
+
+    operations = server.load_non_mutating_operations()
+
+    assert operations == {"projects.list", "projects.summary"}
 
 
 def test_load_non_mutating_operations_uses_package_resource(monkeypatch: Any) -> None:
