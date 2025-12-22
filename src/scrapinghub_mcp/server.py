@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import os
+import sys
+import tomllib
+from pathlib import Path
 from typing import Any, Callable, Protocol, TypeVar, cast
 
 import structlog
+from dotenv import load_dotenv
 from fastmcp import FastMCP
 from scrapinghub import ScrapinghubClient
 
@@ -20,6 +24,7 @@ MCPType = TypeVar("MCPType", bound=MCPProtocol)
 
 
 API_KEY_ENV = "SCRAPINGHUB_API_KEY"
+DOCS_URL = "https://github.com/lambdamechanic/scrapinghub-mcp"
 ALLOWED_METHODS: dict[str, str] = {
     "list_projects": "projects.list",
     "project_summary": "projects.summary",
@@ -27,10 +32,76 @@ ALLOWED_METHODS: dict[str, str] = {
 logger = structlog.get_logger(__name__)
 
 
+def _find_parent(start: Path, predicate: Callable[[Path], bool]) -> Path | None:
+    for parent in (start, *start.parents):
+        if predicate(parent):
+            return parent
+    return None
+
+
+def _resolve_config_path() -> Path:
+    search_root = Path.cwd()
+    direct_path = search_root / "scrapinghub-mcp.toml"
+    if direct_path.is_file():
+        return direct_path
+
+    package_root = _find_parent(search_root, lambda root: (root / "pyproject.toml").is_file())
+    if package_root is not None:
+        config_path = package_root / "scrapinghub-mcp.toml"
+        if config_path.is_file():
+            return config_path
+
+    repo_root = _find_parent(search_root, lambda root: (root / ".git").is_dir())
+    if repo_root is not None:
+        config_path = repo_root / "scrapinghub-mcp.toml"
+        if config_path.is_file():
+            return config_path
+
+    raise RuntimeError(f"Missing scrapinghub-mcp.toml. See {DOCS_URL} for setup.")
+
+
+def _load_auth_config(config_path: Path) -> tuple[str | None, str | None]:
+    raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    auth = raw.get("auth")
+    if not isinstance(auth, dict):
+        return None, None
+    api_key = auth.get("api_key")
+    env_file = auth.get("env_file")
+    api_key_value = api_key.strip() if isinstance(api_key, str) else None
+    env_file_value = env_file.strip() if isinstance(env_file, str) else None
+    return (api_key_value or None, env_file_value or None)
+
+
 def resolve_api_key() -> str:
+    print(f"scrapinghub-mcp: using working directory {Path.cwd()}", file=sys.stderr)
+    try:
+        config_path = _resolve_config_path()
+    except RuntimeError:
+        api_key = os.environ.get(API_KEY_ENV)
+        if api_key:
+            return api_key
+        raise RuntimeError(
+            f"Missing scrapinghub-mcp.toml and {API_KEY_ENV}. "
+            f"Create scrapinghub-mcp.toml or set {API_KEY_ENV}. See {DOCS_URL} for setup."
+        ) from None
+
+    api_key, env_file = _load_auth_config(config_path)
+
+    if env_file:
+        env_path = (config_path.parent / env_file).resolve()
+        logger.info("auth.env_file.load", path=str(env_path))
+        load_dotenv(env_path)
+
+    if api_key:
+        return api_key
+
+    logger.info("auth.api_key.fallback", source="env")
     api_key = os.environ.get(API_KEY_ENV)
     if not api_key:
-        raise RuntimeError(f"Missing {API_KEY_ENV} environment variable.")
+        raise RuntimeError(
+            f"Missing API key in scrapinghub-mcp.toml and {API_KEY_ENV}. "
+            f"Set auth.api_key or {API_KEY_ENV}. See {DOCS_URL} for setup."
+        )
     return api_key
 
 

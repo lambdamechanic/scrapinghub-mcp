@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from scrapinghub_mcp.server import build_server
+import scrapinghub_mcp.server as server
 
 
 class DummyMCP:
@@ -20,9 +20,9 @@ class DummyMCP:
 
 
 def test_build_server_registers_tool(monkeypatch: Any) -> None:
-    monkeypatch.setenv("SCRAPINGHUB_API_KEY", "test-key")
-    server = build_server(DummyMCP)
+    monkeypatch.setattr(server, "resolve_api_key", lambda: "test-key")
+    built_server = server.build_server(DummyMCP)
 
-    assert isinstance(server, DummyMCP)
-    assert "list_projects" in server.tool_registry
-    assert "project_summary" in server.tool_registry
+    assert isinstance(built_server, DummyMCP)
+    assert "list_projects" in built_server.tool_registry
+    assert "project_summary" in built_server.tool_registry
