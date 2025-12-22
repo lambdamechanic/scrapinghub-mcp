@@ -19,6 +19,11 @@ MCPType = TypeVar("MCPType", bound=MCPProtocol)
 
 
 API_KEY_ENV = "SCRAPINGHUB_API_KEY"
+# TODO: Expand with mutating vs non-mutating split once gating is implemented.
+ALLOWED_METHODS: dict[str, str] = {
+    "list_projects": "projects.list",
+    "project_summary": "projects.summary",
+}
 
 
 def resolve_api_key() -> str:
@@ -28,15 +33,36 @@ def resolve_api_key() -> str:
     return api_key
 
 
+def resolve_method(client: Any, path: str) -> Callable[..., Any] | None:
+    current: Any = client
+    for attr in path.split("."):
+        current = getattr(current, attr, None)
+        if current is None:
+            return None
+    return current if callable(current) else None
+
+
+def register_scrapinghub_tools(mcp: MCPType, client: Any) -> None:
+    for tool_name, method_name in ALLOWED_METHODS.items():
+        method = resolve_method(client, method_name)
+        if method is None:
+            continue
+
+        def tool_wrapper(*args: Any, _method: Callable[..., Any] = method, **kwargs: Any) -> Any:
+            result = _method(*args, **kwargs)
+            if isinstance(result, (str, bytes, dict)):
+                return result
+            if hasattr(result, "__iter__"):
+                return list(result)
+            return result
+
+        mcp.tool(name=tool_name)(tool_wrapper)
+
+
 def build_server(mcp_cls: type[MCPType] | None = None) -> MCPType:
     api_key = resolve_api_key()
     cls = cast(type[MCPType], FastMCP) if mcp_cls is None else mcp_cls
     mcp = cls("scrapinghub-mcp")
-
-    @mcp.tool()
-    def list_projects() -> list[dict[str, Any]]:
-        """List Scrapinghub projects for the configured API key."""
-        client = cast(Any, ScrapinghubClient(api_key))
-        return list(client.get_projects())
-
+    client = cast(Any, ScrapinghubClient(api_key))
+    register_scrapinghub_tools(mcp, client)
     return mcp

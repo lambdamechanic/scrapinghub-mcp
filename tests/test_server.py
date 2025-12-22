@@ -25,3 +25,4 @@ def test_build_server_registers_tool(monkeypatch: Any) -> None:
 
     assert isinstance(server, DummyMCP)
     assert "list_projects" in server.tool_registry
+    assert "project_summary" in server.tool_registry
