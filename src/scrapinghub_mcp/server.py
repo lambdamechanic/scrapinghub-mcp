@@ -27,7 +27,7 @@ MCPType = TypeVar("MCPType", bound=MCPProtocol)
 
 API_KEY_ENV = "SCRAPINGHUB_API_KEY"
 DOCS_URL = "https://github.com/lambdamechanic/scrapinghub-mcp"
-MUTATIONS_FILENAME = "scrapinghub-mcp.mutations.yaml"
+ALLOWLIST_FILENAME = "scrapinghub-mcp.allowlist.yaml"
 ALLOWED_METHODS: dict[str, str] = {
     "list_projects": "projects.list",
     "project_summary": "projects.summary",
@@ -79,42 +79,42 @@ def _load_auth_config(config_path: Path) -> tuple[str | None, str | None]:
     return (api_key_value or None, env_file_value or None)
 
 
-def _load_mutations_content() -> tuple[str, str]:
+def _load_allowlist_content() -> tuple[str, str]:
     repo_root = _find_parent(Path.cwd(), lambda root: (root / ".git").is_dir())
     if repo_root is not None:
-        override_path = repo_root / MUTATIONS_FILENAME
+        override_path = repo_root / ALLOWLIST_FILENAME
         if override_path.is_file():
             return override_path.read_text(encoding="utf-8"), str(override_path)
 
     try:
-        resource = resources.files("scrapinghub_mcp").joinpath(MUTATIONS_FILENAME)
+        resource = resources.files("scrapinghub_mcp").joinpath(ALLOWLIST_FILENAME)
         return resource.read_text(encoding="utf-8"), f"package:{resource}"
     except FileNotFoundError as exc:
-        raise RuntimeError(f"Missing {MUTATIONS_FILENAME}. See {DOCS_URL} for setup.") from exc
+        raise RuntimeError(f"Missing {ALLOWLIST_FILENAME}. See {DOCS_URL} for setup.") from exc
 
 
-def _parse_mutations(content: str) -> set[str]:
+def _parse_allowlist(content: str) -> set[str]:
     try:
         payload = yaml.safe_load(content) or {}
     except yaml.YAMLError as exc:
-        raise RuntimeError(f"Failed to parse {MUTATIONS_FILENAME}.") from exc
+        raise RuntimeError(f"Failed to parse {ALLOWLIST_FILENAME}.") from exc
     if not isinstance(payload, dict):
-        raise RuntimeError(f"{MUTATIONS_FILENAME} must define a mapping.")
+        raise RuntimeError(f"{ALLOWLIST_FILENAME} must define a mapping.")
 
-    operations = payload.get("non_mutating") or payload.get("operations")
-    if not isinstance(operations, list) or not operations:
-        raise RuntimeError(f"{MUTATIONS_FILENAME} must define a non_mutating list.")
+    operations = payload.get("non_mutating")
+    if not isinstance(operations, list):
+        raise RuntimeError(f"{ALLOWLIST_FILENAME} must define a non_mutating list.")
 
     non_mutating = [item for item in operations if isinstance(item, str) and item.strip()]
     if len(non_mutating) != len(operations):
-        raise RuntimeError(f"{MUTATIONS_FILENAME} non_mutating list must be strings.")
+        raise RuntimeError(f"{ALLOWLIST_FILENAME} non_mutating list must be strings.")
 
     return set(non_mutating)
 
 
 def load_non_mutating_operations() -> set[str]:
-    content, source = _load_mutations_content()
-    operations = _parse_mutations(content)
+    content, source = _load_allowlist_content()
+    operations = _parse_allowlist(content)
     logger.info("mutations.loaded", source=source, count=len(operations))
     return operations
 

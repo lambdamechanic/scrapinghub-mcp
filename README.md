@@ -38,9 +38,11 @@ operations, start the server with:
 shub-mcp --allow-mutate
 ```
 
-Non-mutating operations are whitelisted in `scrapinghub-mcp.mutations.yaml`,
+Non-mutating operations are whitelisted in `scrapinghub-mcp.allowlist.yaml`,
 which is bundled with the package. During development, you can override it by
-placing a `scrapinghub-mcp.mutations.yaml` file at the repository root.
+placing a `scrapinghub-mcp.allowlist.yaml` file at the repository root
+(directory containing `.git`). When the override is present, it takes
+precedence over the packaged file.
 
 ```yaml
 non_mutating:

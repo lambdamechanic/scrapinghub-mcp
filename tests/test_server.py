@@ -93,15 +93,22 @@ def test_register_scrapinghub_tools_allows_mutating_with_flag() -> None:
 
 def test_parse_mutations_accepts_non_mutating_list() -> None:
     content = "non_mutating:\n  - projects.list\n  - projects.summary\n"
-    operations = server._parse_mutations(content)
+    operations = server._parse_allowlist(content)
 
     assert operations == {"projects.list", "projects.summary"}
+
+
+def test_parse_mutations_allows_empty_non_mutating_list() -> None:
+    content = "non_mutating: []\n"
+    operations = server._parse_allowlist(content)
+
+    assert operations == set()
 
 
 def test_parse_mutations_rejects_missing_list() -> None:
     content = "not_mutations: []\n"
     try:
-        server._parse_mutations(content)
+        server._parse_allowlist(content)
     except RuntimeError as exc:
         assert "non_mutating" in str(exc)
     else:
@@ -112,7 +119,7 @@ def test_load_non_mutating_operations_uses_repo_override(tmp_path: Path, monkeyp
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     (repo_root / ".git").mkdir()
-    (repo_root / "scrapinghub-mcp.mutations.yaml").write_text(
+    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
         "non_mutating:\n  - projects.list\n", encoding="utf-8"
     )
     monkeypatch.chdir(repo_root)
@@ -120,3 +127,10 @@ def test_load_non_mutating_operations_uses_repo_override(tmp_path: Path, monkeyp
     operations = server.load_non_mutating_operations()
 
     assert operations == {"projects.list"}
+
+
+def test_load_non_mutating_operations_uses_package_resource(monkeypatch: Any) -> None:
+    monkeypatch.chdir(Path.cwd())
+    operations = server.load_non_mutating_operations()
+
+    assert operations == {"projects.list", "projects.summary"}
