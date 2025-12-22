@@ -15,7 +15,7 @@ class DummyServer:
 
 def test_cli_starts_stdio_server(monkeypatch: Any) -> None:
     server = DummyServer()
-    monkeypatch.setattr(cli, "build_server", lambda: server)
+    monkeypatch.setattr(cli, "build_server", lambda *, allow_mutate=False: server)
 
     result = cli.main()
 

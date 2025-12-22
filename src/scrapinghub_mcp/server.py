@@ -25,9 +25,14 @@ MCPType = TypeVar("MCPType", bound=MCPProtocol)
 
 API_KEY_ENV = "SCRAPINGHUB_API_KEY"
 DOCS_URL = "https://github.com/lambdamechanic/scrapinghub-mcp"
+MUTATIONS_FILENAME = "scrapinghub-mcp.mutations.yaml"
 ALLOWED_METHODS: dict[str, str] = {
     "list_projects": "projects.list",
     "project_summary": "projects.summary",
+    "delete_project": "projects.delete",
+    "edit_project": "projects.edit",
+    "delete_job": "jobs.delete",
+    "stop_job": "jobs.stop",
 }
 logger = structlog.get_logger(__name__)
 
@@ -72,6 +77,58 @@ def _load_auth_config(config_path: Path) -> tuple[str | None, str | None]:
     return (api_key_value or None, env_file_value or None)
 
 
+def _resolve_mutations_path() -> Path:
+    search_root = Path.cwd()
+    package_root = _find_parent(search_root, lambda root: (root / "pyproject.toml").is_file())
+    if package_root is not None:
+        mutations_path = package_root / MUTATIONS_FILENAME
+        if mutations_path.is_file():
+            return mutations_path
+
+    repo_root = _find_parent(search_root, lambda root: (root / ".git").is_dir())
+    if repo_root is not None:
+        mutations_path = repo_root / MUTATIONS_FILENAME
+        if mutations_path.is_file():
+            return mutations_path
+
+    raise RuntimeError(f"Missing {MUTATIONS_FILENAME}. See {DOCS_URL} for setup.")
+
+
+def _parse_mutations(content: str) -> set[str]:
+    operations: list[str] = []
+    in_operations = False
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if not in_operations:
+            if stripped == "operations:":
+                in_operations = True
+            continue
+        if line.lstrip().startswith("- "):
+            operation = line.lstrip()[2:].strip()
+            if operation:
+                operations.append(operation)
+            continue
+        if line[:1].isspace():
+            continue
+        break
+
+    if not in_operations:
+        raise RuntimeError(f"{MUTATIONS_FILENAME} must define an operations list.")
+    if not operations:
+        raise RuntimeError(f"{MUTATIONS_FILENAME} must include at least one operation.")
+    return set(operations)
+
+
+def load_mutating_operations() -> set[str]:
+    mutations_path = _resolve_mutations_path()
+    content = mutations_path.read_text(encoding="utf-8")
+    operations = _parse_mutations(content)
+    logger.info("mutations.loaded", path=str(mutations_path), count=len(operations))
+    return operations
+
+
 def resolve_api_key() -> str:
     print(f"scrapinghub-mcp: using working directory {Path.cwd()}", file=sys.stderr)
     try:
@@ -114,8 +171,17 @@ def resolve_method(client: Any, path: str) -> Callable[..., Any] | None:
     return current if callable(current) else None
 
 
-def register_scrapinghub_tools(mcp: MCPType, client: Any) -> None:
+def register_scrapinghub_tools(
+    mcp: MCPType,
+    client: Any,
+    *,
+    allow_mutate: bool,
+    mutating_operations: set[str],
+) -> None:
     for tool_name, method_name in ALLOWED_METHODS.items():
+        if method_name in mutating_operations and not allow_mutate:
+            logger.info("tool.skipped", tool=tool_name, method=method_name, reason="mutating")
+            continue
         method = resolve_method(client, method_name)
         if method is None:
             logger.warning("tool.missing", tool=tool_name, method=method_name)
@@ -137,10 +203,15 @@ def register_scrapinghub_tools(mcp: MCPType, client: Any) -> None:
         logger.info("tool.registered", tool=tool_name, method=method_name)
 
 
-def build_server(mcp_cls: type[MCPType] | None = None) -> MCPType:
+def build_server(
+    *, allow_mutate: bool = False, mcp_cls: type[MCPType] | None = None
+) -> MCPType:
     api_key = resolve_api_key()
     cls = cast(type[MCPType], FastMCP) if mcp_cls is None else mcp_cls
     mcp = cls("scrapinghub-mcp")
     client = cast(Any, ScrapinghubClient(api_key))
-    register_scrapinghub_tools(mcp, client)
+    mutating_operations = load_mutating_operations()
+    register_scrapinghub_tools(
+        mcp, client, allow_mutate=allow_mutate, mutating_operations=mutating_operations
+    )
     return mcp
