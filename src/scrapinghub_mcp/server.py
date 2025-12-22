@@ -137,16 +137,43 @@ def _load_allowlist_overrides() -> set[str]:
     return set(items)
 
 
+def _load_allowlist_blocklist() -> set[str]:
+    try:
+        config_path = _resolve_config_path()
+    except RuntimeError:
+        return set()
+
+    raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    safety = raw.get("safety")
+    if safety is None:
+        return set()
+    if not isinstance(safety, dict):
+        raise RuntimeError("safety section in scrapinghub-mcp.toml must be a table.")
+
+    block = safety.get("block_non_mutating")
+    if block is None:
+        return set()
+    if not isinstance(block, list):
+        raise RuntimeError("safety.block_non_mutating must be a list of strings.")
+
+    items = [item for item in block if isinstance(item, str) and item.strip()]
+    if len(items) != len(block):
+        raise RuntimeError("safety.block_non_mutating must contain only strings.")
+    return set(items)
+
+
 def load_non_mutating_operations() -> set[str]:
     content, source = _load_allowlist_content()
     operations = _parse_allowlist(content)
     overrides = _load_allowlist_overrides()
-    merged = operations | overrides
+    blocklist = _load_allowlist_blocklist()
+    merged = (operations | overrides) - blocklist
     logger.info(
         "allowlist.loaded",
         source=source,
         count=len(operations),
         override_count=len(overrides),
+        block_count=len(blocklist),
         merged_count=len(merged),
     )
     return merged

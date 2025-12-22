@@ -16,7 +16,7 @@ directory, then falls back to package or repo roots during development. If no
 config file is present, it falls back to the `SCRAPINGHUB_API_KEY` environment
 variable.
 
-Use `scrapinghub-mcp.toml` with an `[auth]` table:
+Use `scrapinghub-mcp.toml` with top-level `[auth]` and `[safety]` tables:
 
 ```toml
 [auth]
@@ -27,6 +27,8 @@ api_key = "your-key"
 [safety]
 # optional: extend the non-mutating allowlist
 # extra_non_mutating = ["projects.list"]
+# optional: remove items from the allowlist (blocklist wins)
+# block_non_mutating = ["projects.summary"]
 ```
 
 If `env_file` is set, the server loads it and reads `SCRAPINGHUB_API_KEY` from the
@@ -47,10 +49,14 @@ which is bundled with the package. During development, you can override it by
 placing a `scrapinghub-mcp.allowlist.yaml` file at the repository root
 (directory containing `.git`). When the override is present, it takes
 precedence over the packaged file. If you are running outside a git repository,
-only the packaged allowlist is used.
+only the packaged allowlist is used. This asymmetry is intentional so that
+installed users can extend the allowlist via config without overriding the
+packaged baseline.
 
 You can also extend the allowlist from `scrapinghub-mcp.toml` by setting
-`safety.extra_non_mutating` to a list of additional operation identifiers.
+`safety.extra_non_mutating` to a list of additional operation identifiers. If
+you need to explicitly block entries, set `safety.block_non_mutating`—blocklist
+entries take precedence over the allowlist.
 
 ```yaml
 non_mutating:

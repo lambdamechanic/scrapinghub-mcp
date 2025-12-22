@@ -49,3 +49,10 @@ The server SHALL extend the non-mutating allowlist with `safety.extra_non_mutati
 #### Scenario: Extend allowlist from config
 - **WHEN** `safety.extra_non_mutating` is set in `scrapinghub-mcp.toml`
 - **THEN** those operations are treated as non-mutating
+
+### Requirement: Allowlist Blocklist
+The server SHALL remove `safety.block_non_mutating` entries from the non-mutating allowlist when provided, and blocklist entries MUST take precedence over allowlist entries.
+
+#### Scenario: Block allowlist entries from config
+- **WHEN** `safety.block_non_mutating` is set in `scrapinghub-mcp.toml`
+- **THEN** those operations are removed from the non-mutating allowlist

@@ -52,3 +52,10 @@ The `scrapinghub-mcp.toml` file SHALL support a `[safety]` table with an optiona
 #### Scenario: Extend non-mutating allowlist
 - **WHEN** `safety.extra_non_mutating` is set in `scrapinghub-mcp.toml`
 - **THEN** the server adds those operations to the non-mutating allowlist
+
+### Requirement: Allowlist Blocklist
+The `scrapinghub-mcp.toml` file SHALL support a `[safety]` table with an optional `block_non_mutating` list of operation identifiers to remove entries from the non-mutating allowlist.
+
+#### Scenario: Block non-mutating allowlist entries
+- **WHEN** `safety.block_non_mutating` is set in `scrapinghub-mcp.toml`
+- **THEN** the server removes those operations from the non-mutating allowlist

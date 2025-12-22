@@ -191,6 +191,59 @@ def test_load_non_mutating_operations_rejects_invalid_config(
         raise AssertionError("Expected RuntimeError for invalid safety config.")
 
 
+def test_load_non_mutating_operations_blocks_entries(tmp_path: Path, monkeypatch: Any) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+        "non_mutating:\n  - projects.list\n  - projects.summary\n", encoding="utf-8"
+    )
+    (repo_root / "scrapinghub-mcp.toml").write_text(
+        '[safety]\nblock_non_mutating = ["projects.summary"]\n', encoding="utf-8"
+    )
+    monkeypatch.chdir(repo_root)
+
+    operations = server.load_non_mutating_operations()
+
+    assert operations == {"projects.list"}
+
+
+def test_load_non_mutating_operations_blocks_overrides(tmp_path: Path, monkeypatch: Any) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    )
+    (repo_root / "scrapinghub-mcp.toml").write_text(
+        '[safety]\nextra_non_mutating = ["projects.summary"]\n'
+        'block_non_mutating = ["projects.summary"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(repo_root)
+
+    operations = server.load_non_mutating_operations()
+
+    assert operations == {"projects.list"}
+
+
+def test_load_non_mutating_operations_from_cwd_config(tmp_path: Path, monkeypatch: Any) -> None:
+    cwd_root = tmp_path / "cwd"
+    cwd_root.mkdir()
+    (cwd_root / "scrapinghub-mcp.toml").write_text(
+        '[safety]\nextra_non_mutating = ["projects.summary"]\n', encoding="utf-8"
+    )
+    (cwd_root / ".git").mkdir()
+    (cwd_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    )
+    monkeypatch.chdir(cwd_root)
+
+    operations = server.load_non_mutating_operations()
+
+    assert operations == {"projects.list", "projects.summary"}
+
+
 def test_load_non_mutating_operations_uses_package_resource(monkeypatch: Any) -> None:
     monkeypatch.chdir(Path.cwd())
     operations = server.load_non_mutating_operations()
