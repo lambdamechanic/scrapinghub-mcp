@@ -126,6 +126,16 @@ def test_parse_mutations_rejects_non_string_items() -> None:
         raise AssertionError("Expected RuntimeError for non-string allowlist entries.")
 
 
+def test_parse_mutations_rejects_invalid_yaml() -> None:
+    content = "non_mutating: [\n"
+    try:
+        server._parse_allowlist(content)
+    except RuntimeError as exc:
+        assert "Failed to parse" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for invalid YAML.")
+
+
 def test_load_non_mutating_operations_uses_repo_override(tmp_path: Path, monkeypatch: Any) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -138,6 +148,47 @@ def test_load_non_mutating_operations_uses_repo_override(tmp_path: Path, monkeyp
     operations = server.load_non_mutating_operations()
 
     assert operations == {"projects.list"}
+
+
+def test_load_non_mutating_operations_merges_config_allowlist(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    )
+    (repo_root / "scrapinghub-mcp.toml").write_text(
+        '[safety]\nextra_non_mutating = ["projects.summary"]\n', encoding="utf-8"
+    )
+    monkeypatch.chdir(repo_root)
+
+    operations = server.load_non_mutating_operations()
+
+    assert operations == {"projects.list", "projects.summary"}
+
+
+def test_load_non_mutating_operations_rejects_invalid_config(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    )
+    (repo_root / "scrapinghub-mcp.toml").write_text(
+        '[safety]\nextra_non_mutating = "projects.summary"\n', encoding="utf-8"
+    )
+    monkeypatch.chdir(repo_root)
+
+    try:
+        server.load_non_mutating_operations()
+    except RuntimeError as exc:
+        assert "extra_non_mutating" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for invalid safety config.")
 
 
 def test_load_non_mutating_operations_uses_package_resource(monkeypatch: Any) -> None:

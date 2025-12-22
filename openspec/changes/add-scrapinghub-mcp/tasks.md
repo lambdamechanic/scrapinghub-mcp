@@ -7,6 +7,7 @@
 - [ ] 1.6 Add a live integration test that requires an auth key and exercises all non-mutating endpoints.
 - [ ] 1.7 Document setup, configuration (including env file inclusion and mutations mapping), safety flag usage, git hook setup, and CI expectations.
 - [ ] 1.8 Add example HTTP MCP and stdio MCP servers as sibling folders (may require moving this repo to a monorepo layout).
+- [x] 1.9 Extend the non-mutating allowlist via config and add a wheel-contents check in CI.
 
 ## 2. Validation
 - [ ] 2.1 Run linting (`uv run -- ruff check .`).

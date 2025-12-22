@@ -42,3 +42,10 @@ The server SHALL load `scrapinghub-mcp.allowlist.yaml` from the package resource
 #### Scenario: Resolve allowlist file from repository root
 - **WHEN** `scrapinghub-mcp.allowlist.yaml` exists in the repository root
 - **THEN** the server loads the repository root file instead of the package resource
+
+### Requirement: Allowlist Extensions
+The server SHALL extend the non-mutating allowlist with `safety.extra_non_mutating` entries from `scrapinghub-mcp.toml` when provided.
+
+#### Scenario: Extend allowlist from config
+- **WHEN** `safety.extra_non_mutating` is set in `scrapinghub-mcp.toml`
+- **THEN** those operations are treated as non-mutating

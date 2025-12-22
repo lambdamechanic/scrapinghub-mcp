@@ -23,6 +23,10 @@ Use `scrapinghub-mcp.toml` with an `[auth]` table:
 api_key = "your-key"
 # optional
 # env_file = ".env"
+
+[safety]
+# optional: extend the non-mutating allowlist
+# extra_non_mutating = ["projects.list"]
 ```
 
 If `env_file` is set, the server loads it and reads `SCRAPINGHUB_API_KEY` from the
@@ -44,6 +48,9 @@ placing a `scrapinghub-mcp.allowlist.yaml` file at the repository root
 (directory containing `.git`). When the override is present, it takes
 precedence over the packaged file. If you are running outside a git repository,
 only the packaged allowlist is used.
+
+You can also extend the allowlist from `scrapinghub-mcp.toml` by setting
+`safety.extra_non_mutating` to a list of additional operation identifiers.
 
 ```yaml
 non_mutating:

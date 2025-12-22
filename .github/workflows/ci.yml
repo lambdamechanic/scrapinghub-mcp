@@ -25,3 +25,25 @@ jobs:
         run: uv run -- ty check
       - name: Test
         run: uv run -- pytest
+      - name: Build wheel
+        run: uv build
+      - name: Verify allowlist packaging
+        run: |
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+
+          wheels = sorted(Path("dist").glob("scrapinghub_mcp-*-py3-none-any.whl"))
+          if not wheels:
+              raise SystemExit("No wheel found in dist/")
+          wheel = wheels[-1]
+          with zipfile.ZipFile(wheel) as zf:
+              matches = [
+                  name
+                  for name in zf.namelist()
+                  if name.endswith("scrapinghub_mcp/scrapinghub-mcp.allowlist.yaml")
+              ]
+          if not matches:
+              raise SystemExit("Allowlist file missing from wheel.")
+          print("Allowlist packaged:", matches[0])
+          PY

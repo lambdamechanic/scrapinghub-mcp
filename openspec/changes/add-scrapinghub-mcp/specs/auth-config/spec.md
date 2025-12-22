@@ -45,3 +45,10 @@ When the config file is missing, the server SHALL fall back to `SCRAPINGHUB_API_
 #### Scenario: Missing API key
 - **WHEN** the config file is missing and `SCRAPINGHUB_API_KEY` is not set
 - **THEN** startup fails with a clear error message that links to `https://github.com/lambdamechanic/scrapinghub-mcp`
+
+### Requirement: Allowlist Extensions
+The `scrapinghub-mcp.toml` file SHALL support a `[safety]` table with an optional `extra_non_mutating` list of operation identifiers to extend the packaged allowlist.
+
+#### Scenario: Extend non-mutating allowlist
+- **WHEN** `safety.extra_non_mutating` is set in `scrapinghub-mcp.toml`
+- **THEN** the server adds those operations to the non-mutating allowlist
