@@ -363,3 +363,8 @@ def test_load_non_mutating_operations_missing_file(monkeypatch: Any) -> None:
 def test_packaged_allowlist_exists() -> None:
     resource = resources.files("scrapinghub_mcp").joinpath(server.ALLOWLIST_FILENAME)
     assert resource.is_file()
+
+
+def test_packaged_schema_exists() -> None:
+    resource = resources.files("scrapinghub_mcp").joinpath(server.ALLOWLIST_SCHEMA_FILENAME)
+    assert resource.is_file()

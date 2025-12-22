@@ -31,6 +31,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import json
           import tarfile
           import zipfile
 
@@ -50,6 +51,14 @@ jobs:
           allowlist_path = matches[0]
           print("Allowlist packaged:", allowlist_path)
           allowlist_content = zf.read(allowlist_path).decode("utf-8")
+          schema_matches = [
+              name
+              for name in zf.namelist()
+              if name.endswith("scrapinghub_mcp/allowlist-schema.json")
+          ]
+          if not schema_matches:
+              raise SystemExit("Schema file missing from wheel.")
+          wheel_schema = json.loads(zf.read(schema_matches[0]).decode("utf-8"))
 
           sdists = sorted(Path("dist").glob("scrapinghub_mcp-*.tar.gz"))
           if not sdists:
@@ -67,8 +76,17 @@ jobs:
           sdist_allowlist_path = sdist_matches[0]
           print("Allowlist packaged in sdist:", sdist_allowlist_path)
           sdist_content = tf.extractfile(sdist_allowlist_path).read().decode("utf-8")
+          sdist_schema_matches = [
+              name
+              for name in tf.getnames()
+              if name.endswith("scrapinghub_mcp/allowlist-schema.json")
+          ]
+          if not sdist_schema_matches:
+              raise SystemExit("Schema file missing from sdist.")
+          sdist_schema = json.loads(
+              tf.extractfile(sdist_schema_matches[0]).read().decode("utf-8")
+          )
 
-          import json
           import jsonschema
           import yaml
 
@@ -76,6 +94,10 @@ jobs:
           if not schema_path.is_file():
               raise SystemExit(f"Missing schema file at {schema_path}")
           schema = json.loads(schema_path.read_text(encoding="utf-8"))
+          if wheel_schema != schema:
+              raise SystemExit("Wheel schema does not match source schema.")
+          if sdist_schema != schema:
+              raise SystemExit("Sdist schema does not match source schema.")
 
           for content in (allowlist_content, sdist_content):
               data = yaml.safe_load(content) or {}
