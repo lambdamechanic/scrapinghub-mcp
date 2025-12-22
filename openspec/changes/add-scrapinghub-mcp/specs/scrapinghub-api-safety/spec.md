@@ -1,0 +1,44 @@
+## ADDED Requirements
+### Requirement: Non-Mutating Default
+By default, the server SHALL only expose non-mutating Scrapinghub API operations as defined by an explicit non-mutating whitelist mapping.
+
+#### Scenario: Start without mutating flag
+- **WHEN** a user starts the server without the mutating flag
+- **THEN** only non-mutating operations are available
+
+### Requirement: Mutating Opt-In Flag
+The server SHALL require an explicit CLI flag `--allow-mutate` to enable mutating Scrapinghub API operations.
+
+#### Scenario: Enable mutating operations
+- **WHEN** a user starts the server with `--allow-mutate`
+- **THEN** mutating and non-mutating operations are available
+
+### Requirement: Mutating Classification Mapping
+The server SHALL define non-mutating operations via an explicit static mapping loaded from `scrapinghub-mcp.mutations.yaml`. Any operation not in the mapping SHALL be treated as mutating and MUST NOT be inferred dynamically.
+
+#### Scenario: Classify mutating operations
+- **WHEN** the server registers API operations
+- **THEN** mutating operations are classified as any operation not listed in `scrapinghub-mcp.mutations.yaml`
+
+### Requirement: Mutations File Format
+The `scrapinghub-mcp.mutations.yaml` file SHALL contain a top-level `non_mutating` list of operation identifiers, for example:
+```
+non_mutating:
+  - projects.list
+  - projects.summary
+```
+
+#### Scenario: Parse mutations file
+- **WHEN** the server loads `scrapinghub-mcp.mutations.yaml`
+- **THEN** it reads the `non_mutating` list to determine non-mutating operations
+
+### Requirement: Mutations File Location
+The server SHALL load `scrapinghub-mcp.mutations.yaml` from the package resources and SHALL allow a repository root (directory containing `.git`) override when present.
+
+#### Scenario: Resolve mutations file from package resources
+- **WHEN** the server runs without a repository override file
+- **THEN** it loads the packaged `scrapinghub-mcp.mutations.yaml` resource
+
+#### Scenario: Resolve mutations file from repository root
+- **WHEN** `scrapinghub-mcp.mutations.yaml` exists in the repository root
+- **THEN** the server loads the repository root file instead of the package resource

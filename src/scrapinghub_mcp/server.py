@@ -3,10 +3,12 @@ from __future__ import annotations
 import os
 import sys
 import tomllib
+from importlib import resources
 from pathlib import Path
 from typing import Any, Callable, Protocol, TypeVar, cast
 
 import structlog
+import yaml
 from dotenv import load_dotenv
 from fastmcp import FastMCP
 from scrapinghub import ScrapinghubClient
@@ -77,55 +79,43 @@ def _load_auth_config(config_path: Path) -> tuple[str | None, str | None]:
     return (api_key_value or None, env_file_value or None)
 
 
-def _resolve_mutations_path() -> Path:
-    search_root = Path.cwd()
-    package_root = _find_parent(search_root, lambda root: (root / "pyproject.toml").is_file())
-    if package_root is not None:
-        mutations_path = package_root / MUTATIONS_FILENAME
-        if mutations_path.is_file():
-            return mutations_path
-
-    repo_root = _find_parent(search_root, lambda root: (root / ".git").is_dir())
+def _load_mutations_content() -> tuple[str, str]:
+    repo_root = _find_parent(Path.cwd(), lambda root: (root / ".git").is_dir())
     if repo_root is not None:
-        mutations_path = repo_root / MUTATIONS_FILENAME
-        if mutations_path.is_file():
-            return mutations_path
+        override_path = repo_root / MUTATIONS_FILENAME
+        if override_path.is_file():
+            return override_path.read_text(encoding="utf-8"), str(override_path)
 
-    raise RuntimeError(f"Missing {MUTATIONS_FILENAME}. See {DOCS_URL} for setup.")
+    try:
+        resource = resources.files("scrapinghub_mcp").joinpath(MUTATIONS_FILENAME)
+        return resource.read_text(encoding="utf-8"), f"package:{resource}"
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"Missing {MUTATIONS_FILENAME}. See {DOCS_URL} for setup.") from exc
 
 
 def _parse_mutations(content: str) -> set[str]:
-    operations: list[str] = []
-    in_operations = False
-    for line in content.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        if not in_operations:
-            if stripped == "operations:":
-                in_operations = True
-            continue
-        if line.lstrip().startswith("- "):
-            operation = line.lstrip()[2:].strip()
-            if operation:
-                operations.append(operation)
-            continue
-        if line[:1].isspace():
-            continue
-        break
+    try:
+        payload = yaml.safe_load(content) or {}
+    except yaml.YAMLError as exc:
+        raise RuntimeError(f"Failed to parse {MUTATIONS_FILENAME}.") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"{MUTATIONS_FILENAME} must define a mapping.")
 
-    if not in_operations:
-        raise RuntimeError(f"{MUTATIONS_FILENAME} must define an operations list.")
-    if not operations:
-        raise RuntimeError(f"{MUTATIONS_FILENAME} must include at least one operation.")
-    return set(operations)
+    operations = payload.get("non_mutating") or payload.get("operations")
+    if not isinstance(operations, list) or not operations:
+        raise RuntimeError(f"{MUTATIONS_FILENAME} must define a non_mutating list.")
+
+    non_mutating = [item for item in operations if isinstance(item, str) and item.strip()]
+    if len(non_mutating) != len(operations):
+        raise RuntimeError(f"{MUTATIONS_FILENAME} non_mutating list must be strings.")
+
+    return set(non_mutating)
 
 
-def load_mutating_operations() -> set[str]:
-    mutations_path = _resolve_mutations_path()
-    content = mutations_path.read_text(encoding="utf-8")
+def load_non_mutating_operations() -> set[str]:
+    content, source = _load_mutations_content()
     operations = _parse_mutations(content)
-    logger.info("mutations.loaded", path=str(mutations_path), count=len(operations))
+    logger.info("mutations.loaded", source=source, count=len(operations))
     return operations
 
 
@@ -176,11 +166,16 @@ def register_scrapinghub_tools(
     client: Any,
     *,
     allow_mutate: bool,
-    mutating_operations: set[str],
+    non_mutating_operations: set[str],
 ) -> None:
     for tool_name, method_name in ALLOWED_METHODS.items():
-        if method_name in mutating_operations and not allow_mutate:
-            logger.info("tool.skipped", tool=tool_name, method=method_name, reason="mutating")
+        if method_name not in non_mutating_operations and not allow_mutate:
+            logger.info(
+                "tool.skipped",
+                tool=tool_name,
+                method=method_name,
+                reason="mutating-default",
+            )
             continue
         method = resolve_method(client, method_name)
         if method is None:
@@ -210,8 +205,11 @@ def build_server(
     cls = cast(type[MCPType], FastMCP) if mcp_cls is None else mcp_cls
     mcp = cls("scrapinghub-mcp")
     client = cast(Any, ScrapinghubClient(api_key))
-    mutating_operations = load_mutating_operations()
+    non_mutating_operations = load_non_mutating_operations()
     register_scrapinghub_tools(
-        mcp, client, allow_mutate=allow_mutate, mutating_operations=mutating_operations
+        mcp,
+        client,
+        allow_mutate=allow_mutate,
+        non_mutating_operations=non_mutating_operations,
     )
     return mcp

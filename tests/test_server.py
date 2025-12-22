@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Callable
 
 import scrapinghub_mcp.server as server
@@ -19,6 +20,34 @@ class DummyMCP:
         return decorator
 
 
+class DummyProjects:
+    def list(self) -> list[str]:
+        return []
+
+    def summary(self) -> dict[str, str]:
+        return {}
+
+    def delete(self) -> None:
+        return None
+
+    def edit(self) -> None:
+        return None
+
+
+class DummyJobs:
+    def delete(self) -> None:
+        return None
+
+    def stop(self) -> None:
+        return None
+
+
+class DummyClient:
+    def __init__(self) -> None:
+        self.projects = DummyProjects()
+        self.jobs = DummyJobs()
+
+
 def test_build_server_registers_tool(monkeypatch: Any) -> None:
     monkeypatch.setattr(server, "resolve_api_key", lambda: "test-key")
     built_server = server.build_server(mcp_cls=DummyMCP)
@@ -26,3 +55,69 @@ def test_build_server_registers_tool(monkeypatch: Any) -> None:
     assert isinstance(built_server, DummyMCP)
     assert "list_projects" in built_server.tool_registry
     assert "project_summary" in built_server.tool_registry
+
+
+def test_register_scrapinghub_tools_blocks_mutating_by_default() -> None:
+    mcp = DummyMCP("scrapinghub-mcp")
+    client = DummyClient()
+
+    server.register_scrapinghub_tools(
+        mcp,
+        client,
+        allow_mutate=False,
+        non_mutating_operations={"projects.list"},
+    )
+
+    assert "list_projects" in mcp.tool_registry
+    assert "project_summary" not in mcp.tool_registry
+    assert "delete_project" not in mcp.tool_registry
+    assert "edit_project" not in mcp.tool_registry
+    assert "delete_job" not in mcp.tool_registry
+    assert "stop_job" not in mcp.tool_registry
+
+
+def test_register_scrapinghub_tools_allows_mutating_with_flag() -> None:
+    mcp = DummyMCP("scrapinghub-mcp")
+    client = DummyClient()
+
+    server.register_scrapinghub_tools(
+        mcp,
+        client,
+        allow_mutate=True,
+        non_mutating_operations={"projects.list"},
+    )
+
+    assert set(mcp.tool_registry.keys()) == set(server.ALLOWED_METHODS.keys())
+
+
+def test_parse_mutations_accepts_non_mutating_list() -> None:
+    content = "non_mutating:\n  - projects.list\n  - projects.summary\n"
+    operations = server._parse_mutations(content)
+
+    assert operations == {"projects.list", "projects.summary"}
+
+
+def test_parse_mutations_rejects_missing_list() -> None:
+    content = "not_mutations: []\n"
+    try:
+        server._parse_mutations(content)
+    except RuntimeError as exc:
+        assert "non_mutating" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for missing non_mutating list.")
+
+
+def test_load_non_mutating_operations_uses_repo_override(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    (repo_root / "scrapinghub-mcp.mutations.yaml").write_text(
+        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    )
+    monkeypatch.chdir(repo_root)
+
+    operations = server.load_non_mutating_operations()
+
+    assert operations == {"projects.list"}

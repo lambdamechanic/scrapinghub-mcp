@@ -28,3 +28,22 @@ api_key = "your-key"
 If `env_file` is set, the server loads it and reads `SCRAPINGHUB_API_KEY` from the
 process environment. The server does not auto-load `.env` files unless they are
 listed under `auth.env_file`.
+
+## Safety gating
+
+By default, `shub-mcp` only exposes non-mutating operations. To allow mutating
+operations, start the server with:
+
+```bash
+shub-mcp --allow-mutate
+```
+
+Non-mutating operations are whitelisted in `scrapinghub-mcp.mutations.yaml`,
+which is bundled with the package. During development, you can override it by
+placing a `scrapinghub-mcp.mutations.yaml` file at the repository root.
+
+```yaml
+non_mutating:
+  - projects.list
+  - projects.summary
+```

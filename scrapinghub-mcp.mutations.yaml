@@ -1,5 +1,0 @@
-operations:
-  - jobs.delete
-  - jobs.stop
-  - projects.delete
-  - projects.edit

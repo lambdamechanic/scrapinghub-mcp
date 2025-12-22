@@ -1472,6 +1472,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastmcp" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "scrapinghub" },
     { name = "structlog" },
 ]
@@ -1489,6 +1490,7 @@ lint = [
 requires-dist = [
     { name = "fastmcp", specifier = ">=2" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "scrapinghub" },
     { name = "structlog" },
 ]
