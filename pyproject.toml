@@ -1,0 +1,39 @@
+[build-system]
+requires = ["uv-build>=0.1.0"]
+build-backend = "uv_build"
+
+[project]
+name = "scrapinghub-mcp"
+version = "0.1.0"
+description = "Stdio MCP server for the Scrapinghub API."
+requires-python = ">=3.11"
+dependencies = [
+  "fastmcp>=2",
+  "scrapinghub",
+  "structlog",
+]
+
+[dependency-groups]
+lint = [
+  "ruff",
+  "ty",
+]
+dev = [
+  "pytest",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.ty]
+python-version = "3.11"
+
+[tool.uv]
+package = true
