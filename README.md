@@ -16,4 +16,5 @@ api_key = "your-key"
 ```
 
 If `env_file` is set, the server loads it and reads `SCRAPINGHUB_API_KEY` from the
-process environment.
+process environment. The server does not auto-load `.env` files unless they are
+listed under `auth.env_file`.
