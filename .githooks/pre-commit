@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
 
-ruff format
 ruff check .
+ty
+ruff format
