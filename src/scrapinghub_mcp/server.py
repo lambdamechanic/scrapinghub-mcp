@@ -112,16 +112,16 @@ def _parse_allowlist(content: str) -> set[str]:
     return set(non_mutating)
 
 
-def _load_safety_config() -> tuple[set[str], set[str]]:
+def _load_safety_config() -> tuple[set[str], set[str], str | None]:
     try:
         config_path = _resolve_config_path()
     except RuntimeError:
-        return set(), set()
+        return set(), set(), None
 
     raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
     safety = raw.get("safety")
     if safety is None:
-        return set(), set()
+        return set(), set(), str(config_path)
     if not isinstance(safety, dict):
         raise RuntimeError("safety section in scrapinghub-mcp.toml must be a table.")
 
@@ -147,13 +147,13 @@ def _load_safety_config() -> tuple[set[str], set[str]]:
             raise RuntimeError("safety.block_non_mutating must contain only strings.")
         block_items = set(block_values)
 
-    return extra_items, block_items
+    return extra_items, block_items, str(config_path)
 
 
 def load_non_mutating_operations() -> set[str]:
     content, source = _load_allowlist_content()
     operations = _parse_allowlist(content)
-    overrides, blocklist = _load_safety_config()
+    overrides, blocklist, config_path = _load_safety_config()
     merged = (operations | overrides) - blocklist
     logger.info(
         "allowlist.loaded",
@@ -162,6 +162,7 @@ def load_non_mutating_operations() -> set[str]:
         override_count=len(overrides),
         block_count=len(blocklist),
         merged_count=len(merged),
+        config_path=config_path,
     )
     return merged
 

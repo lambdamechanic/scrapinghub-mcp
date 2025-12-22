@@ -12,9 +12,10 @@ shub-mcp
 ```
 
 The server first looks for `scrapinghub-mcp.toml` in the current working
-directory, then falls back to package or repo roots during development. If no
-config file is present, it falls back to the `SCRAPINGHUB_API_KEY` environment
-variable.
+directory, then falls back to the package root (directory containing
+`pyproject.toml`), and finally the repository root (directory containing
+`.git`) during development. If no config file is present, it falls back to the
+`SCRAPINGHUB_API_KEY` environment variable.
 
 Use `scrapinghub-mcp.toml` with top-level `[auth]` and `[safety]` tables:
 
