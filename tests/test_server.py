@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import typing
 from pathlib import Path
 from typing import Any, Callable
 
@@ -21,7 +22,7 @@ class DummyMCP:
 
 
 class DummyProjects:
-    def list(self) -> list[str]:
+    def list(self) -> "typing.List[str]":
         return []
 
     def summary(self) -> dict[str, str]:
