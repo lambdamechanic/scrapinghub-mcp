@@ -68,11 +68,22 @@ jobs:
           print("Allowlist packaged in sdist:", sdist_allowlist_path)
           sdist_content = tf.extractfile(sdist_allowlist_path).read().decode("utf-8")
 
+          import jsonschema
           import yaml
+
+          schema = {
+              "type": "object",
+              "properties": {
+                  "non_mutating": {
+                      "type": "array",
+                      "items": {"type": "string", "minLength": 1},
+                  }
+              },
+              "required": ["non_mutating"],
+              "additionalProperties": False,
+          }
+
           for content in (allowlist_content, sdist_content):
               data = yaml.safe_load(content) or {}
-              if not isinstance(data, dict) or "non_mutating" not in data:
-                  raise SystemExit("Allowlist content missing non_mutating list.")
-              if not isinstance(data["non_mutating"], list):
-                  raise SystemExit("Allowlist non_mutating is not a list.")
+              jsonschema.validate(data, schema)
           PY

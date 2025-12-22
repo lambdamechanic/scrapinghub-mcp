@@ -58,6 +58,13 @@ The allowlist file itself is required even when `safety.extra_non_mutating` or
 `safety.block_non_mutating` are set; config entries only adjust the packaged or
 override allowlist.
 
+Minimal allowlist file:
+
+```yaml
+non_mutating:
+  - projects.list
+```
+
 You can also extend the allowlist from `scrapinghub-mcp.toml` by setting
 `safety.extra_non_mutating` to a list of additional operation identifiers. If
 you need to explicitly block entries, set `safety.block_non_mutating`—blocklist

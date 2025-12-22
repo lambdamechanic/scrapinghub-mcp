@@ -117,15 +117,8 @@ def _parse_allowlist(content: str) -> set[str]:
     except jsonschema.ValidationError as exc:
         raise RuntimeError(f"{ALLOWLIST_FILENAME} is invalid: {exc.message}") from exc
 
-    operations = payload.get("non_mutating")
-    if not isinstance(operations, list):
-        raise RuntimeError(f"{ALLOWLIST_FILENAME} must define a non_mutating list.")
-
-    non_mutating = [item for item in operations if isinstance(item, str) and item.strip()]
-    if len(non_mutating) != len(operations):
-        raise RuntimeError(f"{ALLOWLIST_FILENAME} non_mutating list must be strings.")
-
-    return set(non_mutating)
+    operations = payload.get("non_mutating") or []
+    return set(operations)
 
 
 def _load_safety_config() -> tuple[set[str], set[str], str | None]:
