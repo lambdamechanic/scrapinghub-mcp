@@ -7,6 +7,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Callable, Protocol, TypeVar, cast
 
+import jsonschema
 import structlog
 import yaml
 from dotenv import load_dotenv
@@ -28,6 +29,17 @@ MCPType = TypeVar("MCPType", bound=MCPProtocol)
 API_KEY_ENV = "SCRAPINGHUB_API_KEY"
 DOCS_URL = "https://github.com/lambdamechanic/scrapinghub-mcp"
 ALLOWLIST_FILENAME = "scrapinghub-mcp.allowlist.yaml"
+ALLOWLIST_SCHEMA: dict[str, object] = {
+    "type": "object",
+    "properties": {
+        "non_mutating": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+        }
+    },
+    "required": ["non_mutating"],
+    "additionalProperties": False,
+}
 ALLOWED_METHODS: dict[str, str] = {
     "list_projects": "projects.list",
     "project_summary": "projects.summary",
@@ -100,6 +112,10 @@ def _parse_allowlist(content: str) -> set[str]:
         raise RuntimeError(f"Failed to parse {ALLOWLIST_FILENAME}.") from exc
     if not isinstance(payload, dict):
         raise RuntimeError(f"{ALLOWLIST_FILENAME} must define a mapping.")
+    try:
+        jsonschema.validate(payload, ALLOWLIST_SCHEMA)
+    except jsonschema.ValidationError as exc:
+        raise RuntimeError(f"{ALLOWLIST_FILENAME} is invalid: {exc.message}") from exc
 
     operations = payload.get("non_mutating")
     if not isinstance(operations, list):

@@ -121,7 +121,7 @@ def test_parse_mutations_rejects_non_string_items() -> None:
     try:
         server._parse_allowlist(content)
     except RuntimeError as exc:
-        assert "non_mutating list must be strings" in str(exc)
+        assert "is invalid" in str(exc)
     else:
         raise AssertionError("Expected RuntimeError for non-string allowlist entries.")
 
@@ -211,6 +211,26 @@ def test_load_non_mutating_operations_rejects_invalid_blocklist(
         assert "block_non_mutating" in str(exc)
     else:
         raise AssertionError("Expected RuntimeError for invalid blocklist config.")
+
+
+def test_load_non_mutating_operations_rejects_invalid_safety_table(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    )
+    (repo_root / "scrapinghub-mcp.toml").write_text('safety = "oops"\n', encoding="utf-8")
+    monkeypatch.chdir(repo_root)
+
+    try:
+        server.load_non_mutating_operations()
+    except RuntimeError as exc:
+        assert "safety section" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for invalid safety table.")
 
 
 def test_load_non_mutating_operations_blocks_entries(tmp_path: Path, monkeypatch: Any) -> None:

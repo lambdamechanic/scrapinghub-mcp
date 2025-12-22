@@ -9,6 +9,7 @@ description = "Stdio MCP server for the Scrapinghub API."
 requires-python = ">=3.11"
 dependencies = [
   "fastmcp>=2",
+  "jsonschema",
   "python-dotenv",
   "pyyaml",
   "scrapinghub",

@@ -74,6 +74,9 @@ block_non_mutating = ["projects.summary"]
 Invalid `safety` values (wrong types or non-string list entries) will cause
 startup to fail with a clear error message.
 
+When `safety` is set, the server logs the resolved config path to help with
+troubleshooting.
+
 ```yaml
 non_mutating:
   - projects.list
