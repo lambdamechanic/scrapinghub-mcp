@@ -32,6 +32,13 @@ non_mutating:
 - **WHEN** the server loads `scrapinghub-mcp.allowlist.yaml`
 - **THEN** it reads the `non_mutating` list to determine non-mutating operations
 
+### Requirement: Allowlist Schema
+The package SHALL include an `allowlist-schema.json` file that defines the allowlist structure.
+
+#### Scenario: Validate allowlist schema
+- **WHEN** the server validates the allowlist contents
+- **THEN** it uses the packaged `allowlist-schema.json` schema
+
 ### Requirement: Allowlist File Location
 The server SHALL load `scrapinghub-mcp.allowlist.yaml` from the package resources and SHALL allow a repository root (directory containing `.git`) override when present.
 
