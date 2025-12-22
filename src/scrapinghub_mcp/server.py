@@ -47,21 +47,31 @@ def _find_parent_with_dir(start: Path, dirname: str) -> Path | None:
 
 
 def _resolve_config_path(start_path: Path | None = None) -> Path:
-    search_root = start_path or Path(__file__).resolve()
-    if search_root.is_file():
-        search_root = search_root.parent
+    search_roots = (
+        [start_path] if start_path is not None else [Path(__file__).resolve(), Path.cwd()]
+    )
 
-    package_root = _find_parent_with_file(search_root, "pyproject.toml")
-    if package_root is not None:
-        config_path = package_root / CONFIG_NAME
-        if config_path.is_file():
-            return config_path
+    for search_root in search_roots:
+        if search_root is None:
+            continue
+        if search_root.is_file():
+            search_root = search_root.parent
 
-    repo_root = _find_parent_with_dir(search_root, ".git")
-    if repo_root is not None:
-        config_path = repo_root / CONFIG_NAME
-        if config_path.is_file():
-            return config_path
+        direct_path = search_root / CONFIG_NAME
+        if direct_path.is_file():
+            return direct_path
+
+        package_root = _find_parent_with_file(search_root, "pyproject.toml")
+        if package_root is not None:
+            config_path = package_root / CONFIG_NAME
+            if config_path.is_file():
+                return config_path
+
+        repo_root = _find_parent_with_dir(search_root, ".git")
+        if repo_root is not None:
+            config_path = repo_root / CONFIG_NAME
+            if config_path.is_file():
+                return config_path
 
     raise RuntimeError(f"Missing {CONFIG_NAME}. See {DOCS_URL} for setup.")
 
@@ -79,7 +89,16 @@ def _load_auth_config(config_path: Path) -> tuple[str | None, str | None]:
 
 
 def resolve_api_key(start_path: Path | None = None) -> str:
-    config_path = _resolve_config_path(start_path)
+    try:
+        config_path = _resolve_config_path(start_path)
+    except RuntimeError:
+        api_key = os.environ.get(API_KEY_ENV)
+        if api_key:
+            return api_key
+        raise RuntimeError(
+            f"Missing {CONFIG_NAME} and {API_KEY_ENV}. See {DOCS_URL} for setup."
+        ) from None
+
     api_key, env_file = _load_auth_config(config_path)
 
     if env_file:
@@ -89,9 +108,11 @@ def resolve_api_key(start_path: Path | None = None) -> str:
     if api_key:
         return api_key
 
-    api_key = os.environ.get(API_KEY_ENV) if env_file else None
+    api_key = os.environ.get(API_KEY_ENV)
     if not api_key:
-        raise RuntimeError(f"Missing API key in {CONFIG_NAME}. See {DOCS_URL} for setup.")
+        raise RuntimeError(
+            f"Missing API key in {CONFIG_NAME} or {API_KEY_ENV}. See {DOCS_URL} for setup."
+        )
     return api_key
 
 

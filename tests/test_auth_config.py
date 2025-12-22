@@ -71,7 +71,57 @@ def test_resolve_api_key_loads_env_file(tmp_path: Path, monkeypatch: Any) -> Non
     assert resolve_api_key(start_path) == "env-key"
 
 
-def test_missing_api_key_error_includes_docs_link(tmp_path: Path) -> None:
+def test_resolve_api_key_uses_env_when_env_file_missing(tmp_path: Path, monkeypatch: Any) -> None:
+    repo_root = tmp_path / "repo"
+    package_root = repo_root / "package"
+    start_path = package_root / "src" / "scrapinghub_mcp"
+    start_path.mkdir(parents=True)
+    (repo_root / ".git").mkdir(parents=True)
+    _write_config(package_root / "pyproject.toml", "[project]\nname = 'pkg'\n")
+    _write_config(
+        package_root / "scrapinghub-mcp.toml",
+        "[auth]\nenv_file = 'missing.env'\n",
+    )
+
+    monkeypatch.setenv("SCRAPINGHUB_API_KEY", "env-key")
+
+    assert resolve_api_key(start_path) == "env-key"
+
+
+def test_resolve_api_key_prefers_config_over_env_file(tmp_path: Path, monkeypatch: Any) -> None:
+    repo_root = tmp_path / "repo"
+    package_root = repo_root / "package"
+    start_path = package_root / "src" / "scrapinghub_mcp"
+    start_path.mkdir(parents=True)
+    (repo_root / ".git").mkdir(parents=True)
+    _write_config(package_root / "pyproject.toml", "[project]\nname = 'pkg'\n")
+    _write_config(
+        package_root / "scrapinghub-mcp.toml",
+        "[auth]\napi_key = 'config-key'\nenv_file = 'secrets.env'\n",
+    )
+    _write_config(
+        package_root / "secrets.env",
+        "SCRAPINGHUB_API_KEY=env-key\n",
+    )
+
+    monkeypatch.setenv("SCRAPINGHUB_API_KEY", "env-key")
+
+    assert resolve_api_key(start_path) == "config-key"
+
+
+def test_resolve_api_key_errors_when_config_missing(tmp_path: Path, monkeypatch: Any) -> None:
+    start_path = tmp_path / "install" / "scrapinghub_mcp"
+    start_path.mkdir(parents=True)
+
+    monkeypatch.delenv("SCRAPINGHUB_API_KEY", raising=False)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        resolve_api_key(start_path)
+
+    assert "https://github.com/lambdamechanic/scrapinghub-mcp" in str(excinfo.value)
+
+
+def test_missing_api_key_error_includes_docs_link(tmp_path: Path, monkeypatch: Any) -> None:
     repo_root = tmp_path / "repo"
     package_root = repo_root / "package"
     start_path = package_root / "src" / "scrapinghub_mcp"
@@ -79,6 +129,8 @@ def test_missing_api_key_error_includes_docs_link(tmp_path: Path) -> None:
     (repo_root / ".git").mkdir(parents=True)
     _write_config(package_root / "pyproject.toml", "[project]\nname = 'pkg'\n")
     _write_config(package_root / "scrapinghub-mcp.toml", "[auth]\napi_key = ''\n")
+
+    monkeypatch.delenv("SCRAPINGHUB_API_KEY", raising=False)
 
     with pytest.raises(RuntimeError) as excinfo:
         resolve_api_key(start_path)
