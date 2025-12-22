@@ -1471,6 +1471,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastmcp" },
+    { name = "python-dotenv" },
     { name = "scrapinghub" },
     { name = "structlog" },
 ]
@@ -1487,6 +1488,7 @@ lint = [
 [package.metadata]
 requires-dist = [
     { name = "fastmcp", specifier = ">=2" },
+    { name = "python-dotenv" },
     { name = "scrapinghub" },
     { name = "structlog" },
 ]

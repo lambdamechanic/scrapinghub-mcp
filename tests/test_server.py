@@ -19,7 +19,8 @@ class DummyMCP:
         return decorator
 
 
-def test_build_server_registers_tool() -> None:
+def test_build_server_registers_tool(monkeypatch: Any) -> None:
+    monkeypatch.setenv("SCRAPINGHUB_API_KEY", "test-key")
     server = build_server(DummyMCP)
 
     assert isinstance(server, DummyMCP)
