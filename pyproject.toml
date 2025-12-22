@@ -13,6 +13,9 @@ dependencies = [
   "structlog",
 ]
 
+[project.scripts]
+shub-mcp = "scrapinghub_mcp.cli:main"
+
 [dependency-groups]
 lint = [
   "ruff",
