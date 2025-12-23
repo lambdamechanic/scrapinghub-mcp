@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "repos": {
+    "entries": [
+      {
+        "key": "github.com/lambdamechanic/skills",
+        "alias": "lambdamechanic/skills",
+        "url": "git@github.com:lambdamechanic/skills.git",
+        "host": "github.com",
+        "owner": "lambdamechanic",
+        "repo": "skills",
+        "addedAt": "2025-12-22T04:05:07.878591295+00:00"
+      }
+    ],
+    "updatedAt": "2025-12-22T04:05:07.878591966+00:00"
+  },
+  "skills": [
+    {
+      "installName": "bd-workflow",
+      "source": {
+        "repoKey": "github.com/lambdamechanic/skills",
+        "skillPath": "bd-workflow"
+      },
+      "commit": "e73f2173b93a3a70281020bba727ee3e2dc8e4b4",
+      "digest": "sha256:42892feebcaa6afb7796284d24efc75fc1c591c95c593e18661d94b3372f5780",
+      "installedAt": "2025-12-22T04:05:07.878571232+00:00"
+    },
+    {
+      "installName": "lambda-workflow",
+      "source": {
+        "repoKey": "github.com/lambdamechanic/skills",
+        "skillPath": "lambda-workflow"
+      },
+      "commit": "e73f2173b93a3a70281020bba727ee3e2dc8e4b4",
+      "digest": "sha256:e55d56c0d6ada889023ea4248d10629fcc557ffa4f899f619faa0c9c36be8cd5",
+      "installedAt": "2025-12-22T04:05:12.779707096+00:00"
+    },
+    {
+      "installName": "zfc",
+      "source": {
+        "repoKey": "github.com/lambdamechanic/skills",
+        "skillPath": "zfc"
+      },
+      "commit": "e73f2173b93a3a70281020bba727ee3e2dc8e4b4",
+      "digest": "sha256:0b5d0d8ccb4ad0b0379e528c6b2fc2b46f39ef8a8c85bc088f822438c17154a1",
+      "installedAt": "2025-12-22T04:37:47.592793267+00:00"
+    }
+  ],
+  "generatedAt": "2025-12-22T04:37:47.592872912+00:00"
+}
