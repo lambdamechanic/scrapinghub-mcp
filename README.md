@@ -36,6 +36,20 @@ If `env_file` is set, the server loads it and reads `SCRAPINGHUB_API_KEY` from t
 process environment. The server does not auto-load `.env` files unless they are
 listed under `auth.env_file`.
 
+## Development setup
+
+Install tooling dependencies with uv:
+
+```bash
+uv sync --frozen --group lint --group dev
+```
+
+Configure git hooks to run formatting and checks:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Safety gating
 
 By default, `shub-mcp` only exposes non-mutating operations. To allow mutating
@@ -91,4 +105,15 @@ troubleshooting.
 non_mutating:
   - projects.list
   - projects.summary
+```
+
+## CI expectations
+
+CI runs formatting, linting, type checking, and tests:
+
+```bash
+uv run -- ruff format --check .
+uv run -- ruff check .
+uv run -- ty check
+uv run pytest
 ```
