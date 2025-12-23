@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 import sys
 
 import structlog
@@ -13,8 +12,6 @@ logger = structlog.get_logger(__name__)
 
 
 def _configure_logging() -> None:
-    os.environ.setdefault("FASTMCP_SHOW_CLI_BANNER", "false")
-    os.environ.setdefault("FASTMCP_LOG_ENABLED", "false")
     structlog.configure(
         processors=[
             structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
