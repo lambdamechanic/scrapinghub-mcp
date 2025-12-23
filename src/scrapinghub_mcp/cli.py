@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 
 import structlog
@@ -16,7 +17,7 @@ def _configure_logging() -> None:
             structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
             structlog.dev.ConsoleRenderer(),
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(structlog.INFO),
+        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
         logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
     )
 
