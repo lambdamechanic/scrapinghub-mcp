@@ -231,6 +231,28 @@ def register_scrapinghub_tools(
     allow_mutate: bool,
     non_mutating_operations: set[str],
 ) -> None:
+    def make_tool_wrapper(
+        method: Callable[..., Any],
+        tool_name: str,
+        method_name: str,
+    ) -> Callable[[dict[str, Any] | None], Any]:
+        def tool_wrapper(params: dict[str, Any] | None = None) -> Any:
+            try:
+                kwargs = params or {}
+                if not isinstance(kwargs, dict):
+                    raise TypeError("Tool params must be a JSON object.")
+                result = method(**kwargs)
+            except Exception as exc:
+                logger.exception("tool.failed", tool=tool_name, method=method_name)
+                raise RuntimeError(f"Scrapinghub tool '{tool_name}' failed.") from exc
+            if isinstance(result, (str, bytes, dict)):
+                return result
+            if hasattr(result, "__iter__"):
+                return list(result)
+            return result
+
+        return tool_wrapper
+
     for tool_name, method_name in ALLOWED_METHODS.items():
         if method_name not in non_mutating_operations and not allow_mutate:
             logger.info(
@@ -244,25 +266,7 @@ def register_scrapinghub_tools(
         if method is None:
             logger.warning("tool.missing", tool=tool_name, method=method_name)
             continue
-
-        def tool_wrapper(
-            _method: Callable[..., Any] = method,
-            _tool_name: str = tool_name,
-            _method_name: str = method_name,
-            **kwargs: Any,
-        ) -> Any:
-            try:
-                result = _method(**kwargs)
-            except Exception as exc:
-                logger.exception("tool.failed", tool=_tool_name, method=_method_name)
-                raise RuntimeError(f"Scrapinghub tool '{_tool_name}' failed.") from exc
-            if isinstance(result, (str, bytes, dict)):
-                return result
-            if hasattr(result, "__iter__"):
-                return list(result)
-            return result
-
-        mcp.tool(name=tool_name)(tool_wrapper)
+        mcp.tool(name=tool_name)(make_tool_wrapper(method, tool_name, method_name))
         logger.info("tool.registered", tool=tool_name, method=method_name)
 
 
