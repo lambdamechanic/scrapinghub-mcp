@@ -1,5 +1,5 @@
 [build-system]
-requires = ["uv-build>=0.1.0"]
+requires = ["uv_build>=0.9.18,<0.10.0"]
 build-backend = "uv_build"
 
 [project]
@@ -40,3 +40,9 @@ line-ending = "lf"
 
 [tool.uv]
 package = true
+
+[tool.uv.build-backend]
+source-include = [
+  "src/scrapinghub_mcp/scrapinghub-mcp.allowlist.yaml",
+  "src/scrapinghub_mcp/allowlist-schema.json",
+]

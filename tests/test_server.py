@@ -50,6 +50,32 @@ class DummyClient:
         self.jobs = DummyJobs()
 
 
+def make_repo(
+    tmp_path: Path,
+    name: str,
+    *,
+    allowlist: str | None = None,
+    config: str | None = None,
+    add_git: bool = True,
+    add_pyproject: bool = False,
+) -> Path:
+    repo_root = tmp_path / name
+    repo_root.mkdir()
+    if add_git:
+        (repo_root / ".git").mkdir()
+    if add_pyproject:
+        (repo_root / "pyproject.toml").write_text(
+            '[project]\nname = "dummy"\n', encoding="utf-8"
+        )
+    if allowlist is not None:
+        (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
+            allowlist, encoding="utf-8"
+        )
+    if config is not None:
+        (repo_root / "scrapinghub-mcp.toml").write_text(config, encoding="utf-8")
+    return repo_root
+
+
 def test_build_server_registers_tool(monkeypatch: Any) -> None:
     monkeypatch.setattr(server, "resolve_api_key", lambda: "test-key")
     built_server = server.build_server(mcp_cls=DummyMCP)
@@ -157,11 +183,10 @@ def test_parse_mutations_rejects_invalid_yaml() -> None:
 
 
 def test_load_non_mutating_operations_uses_repo_override(tmp_path: Path, monkeypatch: Any) -> None:
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    repo_root = make_repo(
+        tmp_path,
+        "repo",
+        allowlist="non_mutating:\n  - projects.list\n",
     )
     monkeypatch.chdir(repo_root)
 
@@ -173,14 +198,11 @@ def test_load_non_mutating_operations_uses_repo_override(tmp_path: Path, monkeyp
 def test_load_non_mutating_operations_merges_config_allowlist(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n", encoding="utf-8"
-    )
-    (repo_root / "scrapinghub-mcp.toml").write_text(
-        '[safety]\nextra_non_mutating = ["projects.summary"]\n', encoding="utf-8"
+    repo_root = make_repo(
+        tmp_path,
+        "repo",
+        allowlist="non_mutating:\n  - projects.list\n",
+        config='[safety]\nextra_non_mutating = ["projects.summary"]\n',
     )
     monkeypatch.chdir(repo_root)
 
@@ -192,14 +214,11 @@ def test_load_non_mutating_operations_merges_config_allowlist(
 def test_load_non_mutating_operations_rejects_invalid_config(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n", encoding="utf-8"
-    )
-    (repo_root / "scrapinghub-mcp.toml").write_text(
-        '[safety]\nextra_non_mutating = "projects.summary"\n', encoding="utf-8"
+    repo_root = make_repo(
+        tmp_path,
+        "repo",
+        allowlist="non_mutating:\n  - projects.list\n",
+        config='[safety]\nextra_non_mutating = "projects.summary"\n',
     )
     monkeypatch.chdir(repo_root)
 
@@ -214,14 +233,11 @@ def test_load_non_mutating_operations_rejects_invalid_config(
 def test_load_non_mutating_operations_rejects_invalid_blocklist(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n", encoding="utf-8"
-    )
-    (repo_root / "scrapinghub-mcp.toml").write_text(
-        '[safety]\nblock_non_mutating = "projects.summary"\n', encoding="utf-8"
+    repo_root = make_repo(
+        tmp_path,
+        "repo",
+        allowlist="non_mutating:\n  - projects.list\n",
+        config='[safety]\nblock_non_mutating = "projects.summary"\n',
     )
     monkeypatch.chdir(repo_root)
 
@@ -236,13 +252,12 @@ def test_load_non_mutating_operations_rejects_invalid_blocklist(
 def test_load_non_mutating_operations_rejects_invalid_safety_table(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    repo_root = make_repo(
+        tmp_path,
+        "repo",
+        allowlist="non_mutating:\n  - projects.list\n",
+        config='safety = "oops"\n',
     )
-    (repo_root / "scrapinghub-mcp.toml").write_text('safety = "oops"\n', encoding="utf-8")
     monkeypatch.chdir(repo_root)
 
     try:
@@ -254,14 +269,11 @@ def test_load_non_mutating_operations_rejects_invalid_safety_table(
 
 
 def test_load_non_mutating_operations_blocks_entries(tmp_path: Path, monkeypatch: Any) -> None:
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n  - projects.summary\n", encoding="utf-8"
-    )
-    (repo_root / "scrapinghub-mcp.toml").write_text(
-        '[safety]\nblock_non_mutating = ["projects.summary"]\n', encoding="utf-8"
+    repo_root = make_repo(
+        tmp_path,
+        "repo",
+        allowlist="non_mutating:\n  - projects.list\n  - projects.summary\n",
+        config='[safety]\nblock_non_mutating = ["projects.summary"]\n',
     )
     monkeypatch.chdir(repo_root)
 
@@ -271,16 +283,12 @@ def test_load_non_mutating_operations_blocks_entries(tmp_path: Path, monkeypatch
 
 
 def test_load_non_mutating_operations_blocks_overrides(tmp_path: Path, monkeypatch: Any) -> None:
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-    (repo_root / ".git").mkdir()
-    (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n", encoding="utf-8"
-    )
-    (repo_root / "scrapinghub-mcp.toml").write_text(
-        '[safety]\nextra_non_mutating = ["projects.summary"]\n'
+    repo_root = make_repo(
+        tmp_path,
+        "repo",
+        allowlist="non_mutating:\n  - projects.list\n",
+        config='[safety]\nextra_non_mutating = ["projects.summary"]\n'
         'block_non_mutating = ["projects.summary"]\n',
-        encoding="utf-8",
     )
     monkeypatch.chdir(repo_root)
 
@@ -290,14 +298,11 @@ def test_load_non_mutating_operations_blocks_overrides(tmp_path: Path, monkeypat
 
 
 def test_load_non_mutating_operations_from_cwd_config(tmp_path: Path, monkeypatch: Any) -> None:
-    cwd_root = tmp_path / "cwd"
-    cwd_root.mkdir()
-    (cwd_root / "scrapinghub-mcp.toml").write_text(
-        '[safety]\nextra_non_mutating = ["projects.summary"]\n', encoding="utf-8"
-    )
-    (cwd_root / ".git").mkdir()
-    (cwd_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    cwd_root = make_repo(
+        tmp_path,
+        "cwd",
+        allowlist="non_mutating:\n  - projects.list\n",
+        config='[safety]\nextra_non_mutating = ["projects.summary"]\n',
     )
     monkeypatch.chdir(cwd_root)
 
@@ -307,14 +312,11 @@ def test_load_non_mutating_operations_from_cwd_config(tmp_path: Path, monkeypatc
 
 
 def test_load_non_mutating_operations_from_cwd_blocklist(tmp_path: Path, monkeypatch: Any) -> None:
-    cwd_root = tmp_path / "cwd"
-    cwd_root.mkdir()
-    (cwd_root / "scrapinghub-mcp.toml").write_text(
-        '[safety]\nblock_non_mutating = ["projects.summary"]\n', encoding="utf-8"
-    )
-    (cwd_root / ".git").mkdir()
-    (cwd_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n  - projects.summary\n", encoding="utf-8"
+    cwd_root = make_repo(
+        tmp_path,
+        "cwd",
+        allowlist="non_mutating:\n  - projects.list\n  - projects.summary\n",
+        config='[safety]\nblock_non_mutating = ["projects.summary"]\n',
     )
     monkeypatch.chdir(cwd_root)
 
@@ -324,19 +326,28 @@ def test_load_non_mutating_operations_from_cwd_blocklist(tmp_path: Path, monkeyp
 
 
 def test_load_non_mutating_operations_from_package_root(tmp_path: Path, monkeypatch: Any) -> None:
-    pkg_root = tmp_path / "pkg"
-    pkg_root.mkdir()
-    (pkg_root / "pyproject.toml").write_text('[project]\nname = "dummy"\n')
-    (pkg_root / "scrapinghub-mcp.toml").write_text(
-        '[safety]\nextra_non_mutating = ["projects.summary"]\n', encoding="utf-8"
-    )
-    (pkg_root / ".git").mkdir()
-    (pkg_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-        "non_mutating:\n  - projects.list\n", encoding="utf-8"
+    pkg_root = make_repo(
+        tmp_path,
+        "pkg",
+        allowlist="non_mutating:\n  - projects.list\n",
+        config='[safety]\nextra_non_mutating = ["projects.summary"]\n',
+        add_pyproject=True,
     )
     nested = pkg_root / "subdir"
     nested.mkdir()
     monkeypatch.chdir(nested)
+
+    operations = server.load_non_mutating_operations()
+
+    assert operations == {"projects.list", "projects.summary"}
+
+
+def test_load_non_mutating_operations_without_repo_root(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    no_git_root = tmp_path / "nogit"
+    no_git_root.mkdir()
+    monkeypatch.chdir(no_git_root)
 
     operations = server.load_non_mutating_operations()
 

@@ -245,12 +245,18 @@ def register_scrapinghub_tools(
             logger.warning("tool.missing", tool=tool_name, method=method_name)
             continue
 
-        def tool_wrapper(*args: Any, _method: Callable[..., Any] = method, **kwargs: Any) -> Any:
+        def tool_wrapper(
+            *args: Any,
+            _method: Callable[..., Any] = method,
+            _tool_name: str = tool_name,
+            _method_name: str = method_name,
+            **kwargs: Any,
+        ) -> Any:
             try:
                 result = _method(*args, **kwargs)
             except Exception as exc:
-                logger.exception("tool.failed", tool=tool_name, method=method_name)
-                raise RuntimeError(f"Scrapinghub tool '{tool_name}' failed.") from exc
+                logger.exception("tool.failed", tool=_tool_name, method=_method_name)
+                raise RuntimeError(f"Scrapinghub tool '{_tool_name}' failed.") from exc
             if isinstance(result, (str, bytes, dict)):
                 return result
             if hasattr(result, "__iter__"):
