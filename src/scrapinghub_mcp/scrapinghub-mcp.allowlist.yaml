@@ -1,3 +1,31 @@
 non_mutating:
+  - get_job
+  - get_project
+  - project.activity.iter
+  - project.activity.list
+  - project.collections.get
+  - project.collections.get_cached_store
+  - project.collections.get_store
+  - project.collections.get_versioned_cached_store
+  - project.collections.get_versioned_store
+  - project.collections.iter
+  - project.collections.list
+  - project.frontiers.get
+  - project.frontiers.iter
+  - project.frontiers.list
+  - project.jobs.count
+  - project.jobs.get
+  - project.jobs.iter
+  - project.jobs.iter_last
+  - project.jobs.list
+  - project.jobs.summary
+  - project.settings.get
+  - project.settings.iter
+  - project.settings.list
+  - project.spiders.get
+  - project.spiders.iter
+  - project.spiders.list
   - projects.list
+  - projects.get
+  - projects.iter
   - projects.summary

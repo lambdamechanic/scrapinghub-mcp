@@ -5,6 +5,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Callable
 
+from requests import HTTPError, Response
+
 import scrapinghub_mcp.server as server
 
 
@@ -44,10 +46,63 @@ class DummyJobs:
         return None
 
 
+class DummyJobMeta:
+    def __init__(self, data: dict[str, int | str]) -> None:
+        self._data = data
+
+    def list(self) -> typing.List[typing.Tuple[str, int | str]]:
+        return list(self._data.items())
+
+
+class DummyJob:
+    def __init__(self, job_key: str) -> None:
+        self.key = job_key
+        self.project_id = int(job_key.split("/")[0])
+        self.metadata = DummyJobMeta({"state": "finished"})
+
+
+class DummyProject:
+    def __init__(self, project_id: int) -> None:
+        self.key = str(project_id)
+
+
 class DummyClient:
     def __init__(self) -> None:
         self.projects = DummyProjects()
         self.jobs = DummyJobs()
+
+    def get_job(self, job_key: str) -> DummyJob:
+        return DummyJob(job_key)
+
+    def get_project(self, project_id: int) -> DummyProject:
+        return DummyProject(project_id)
+
+    def close(self) -> None:
+        return None
+
+
+def load_packaged_allowlist() -> set[str]:
+    resource = resources.files("scrapinghub_mcp").joinpath(server.ALLOWLIST_FILENAME)
+    content = resource.read_text(encoding="utf-8")
+    return server._parse_allowlist(content)
+
+
+class DummyAuthFailureProjects:
+    def list(self) -> None:
+        response = Response()
+        response.status_code = 401
+        response.url = "https://storage.scrapinghub.com"
+        raise HTTPError(response=response)
+
+
+class DummySummaryProjects:
+    def list(self) -> typing.List[int]:
+        return [1, 2]
+
+    def summary(self) -> typing.List[dict[str, int]]:
+        return [
+            {"project": 1, "running": 0, "pending": 0, "finished": 0, "has_capacity": True}
+        ]
 
 
 def make_repo(
@@ -94,10 +149,11 @@ def test_register_scrapinghub_tools_blocks_mutating_by_default() -> None:
 
     assert "list_projects" in mcp.tool_registry
     assert "project_summary" not in mcp.tool_registry
-    assert "delete_project" not in mcp.tool_registry
-    assert "edit_project" not in mcp.tool_registry
-    assert "delete_job" not in mcp.tool_registry
-    assert "stop_job" not in mcp.tool_registry
+    assert "project_jobs_run" not in mcp.tool_registry
+    assert "project_jobs_cancel" not in mcp.tool_registry
+    assert "project_activity_add" not in mcp.tool_registry
+    assert "project_frontiers_flush" not in mcp.tool_registry
+    assert "project_settings_set" not in mcp.tool_registry
 
 
 def test_register_scrapinghub_tools_allows_mutating_with_flag() -> None:
@@ -111,7 +167,79 @@ def test_register_scrapinghub_tools_allows_mutating_with_flag() -> None:
         non_mutating_operations={"projects.list"},
     )
 
-    assert set(mcp.tool_registry.keys()) == set(server.ALLOWED_METHODS.keys())
+    assert set(mcp.tool_registry.keys()) == set(server.TOOL_SPECS.keys())
+
+
+def test_tool_wrapper_returns_auth_error_message() -> None:
+    mcp = DummyMCP("scrapinghub-mcp")
+    client = DummyClient()
+    client.projects = DummyAuthFailureProjects()
+
+    server.register_scrapinghub_tools(
+        mcp,
+        client,
+        allow_mutate=False,
+        non_mutating_operations={"projects.list"},
+    )
+
+    tool = mcp.tool_registry["list_projects"]
+    try:
+        tool()
+    except RuntimeError as exc:
+        message = str(exc)
+        assert "Authentication failed" in message
+        assert server.API_KEY_ENV in message
+    else:
+        raise AssertionError("Expected RuntimeError for auth failure.")
+
+
+def test_tool_wrapper_wraps_list_of_dicts() -> None:
+    mcp = DummyMCP("scrapinghub-mcp")
+    client = DummyClient()
+    client.projects = DummySummaryProjects()
+
+    server.register_scrapinghub_tools(
+        mcp,
+        client,
+        allow_mutate=False,
+        non_mutating_operations={"projects.list", "projects.summary"},
+    )
+
+    tool = mcp.tool_registry["project_summary"]
+    result = tool()
+
+    assert result.model_dump() == {
+        "items": [
+            {
+                "project": 1,
+                "running": 0,
+                "pending": 0,
+                "finished": 0,
+                "has_capacity": True,
+            }
+        ]
+    }
+
+
+def test_get_job_returns_metadata() -> None:
+    mcp = DummyMCP("scrapinghub-mcp")
+    client = DummyClient()
+
+    server.register_scrapinghub_tools(
+        mcp,
+        client,
+        allow_mutate=False,
+        non_mutating_operations={"get_job"},
+    )
+
+    tool = mcp.tool_registry["get_job"]
+    result = tool({"job_key": "1/2/3"})
+
+    assert result.model_dump() == {
+        "job_key": "1/2/3",
+        "project_id": 1,
+        "metadata": {"state": "finished"},
+    }
 
 
 def test_parse_mutations_accepts_non_mutating_list() -> None:
@@ -345,14 +473,14 @@ def test_load_non_mutating_operations_without_repo_root(tmp_path: Path, monkeypa
 
     operations = server.load_non_mutating_operations()
 
-    assert operations == {"projects.list", "projects.summary"}
+    assert operations == load_packaged_allowlist()
 
 
 def test_load_non_mutating_operations_uses_package_resource(monkeypatch: Any) -> None:
     monkeypatch.chdir(Path.cwd())
     operations = server.load_non_mutating_operations()
 
-    assert operations == {"projects.list", "projects.summary"}
+    assert operations == load_packaged_allowlist()
 
 
 def test_load_non_mutating_operations_missing_file(monkeypatch: Any) -> None:
