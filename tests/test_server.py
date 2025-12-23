@@ -64,13 +64,9 @@ def make_repo(
     if add_git:
         (repo_root / ".git").mkdir()
     if add_pyproject:
-        (repo_root / "pyproject.toml").write_text(
-            '[project]\nname = "dummy"\n', encoding="utf-8"
-        )
+        (repo_root / "pyproject.toml").write_text('[project]\nname = "dummy"\n', encoding="utf-8")
     if allowlist is not None:
-        (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(
-            allowlist, encoding="utf-8"
-        )
+        (repo_root / "scrapinghub-mcp.allowlist.yaml").write_text(allowlist, encoding="utf-8")
     if config is not None:
         (repo_root / "scrapinghub-mcp.toml").write_text(config, encoding="utf-8")
     return repo_root
@@ -342,9 +338,7 @@ def test_load_non_mutating_operations_from_package_root(tmp_path: Path, monkeypa
     assert operations == {"projects.list", "projects.summary"}
 
 
-def test_load_non_mutating_operations_without_repo_root(
-    tmp_path: Path, monkeypatch: Any
-) -> None:
+def test_load_non_mutating_operations_without_repo_root(tmp_path: Path, monkeypatch: Any) -> None:
     no_git_root = tmp_path / "nogit"
     no_git_root.mkdir()
     monkeypatch.chdir(no_git_root)
