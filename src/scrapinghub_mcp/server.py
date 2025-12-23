@@ -401,9 +401,7 @@ def _call_projects_method(client: Any, method_name: str, params: BaseModel) -> A
     return method(**kwargs) if kwargs else method()
 
 
-def _call_project_method(
-    client: Any, resource: str, method_name: str, params: HasProjectId
-) -> Any:
+def _call_project_method(client: Any, resource: str, method_name: str, params: HasProjectId) -> Any:
     project = client.get_project(params.project_id)
     target = getattr(project, resource)
     method = getattr(target, method_name)

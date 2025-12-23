@@ -100,9 +100,7 @@ class DummySummaryProjects:
         return [1, 2]
 
     def summary(self) -> typing.List[dict[str, int]]:
-        return [
-            {"project": 1, "running": 0, "pending": 0, "finished": 0, "has_capacity": True}
-        ]
+        return [{"project": 1, "running": 0, "pending": 0, "finished": 0, "has_capacity": True}]
 
 
 def make_repo(
