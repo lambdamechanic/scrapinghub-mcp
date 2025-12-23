@@ -21,6 +21,11 @@ Use this skill when working on Python projects or adding Python support.
 - Write tests with `pytest` and property tests with `hypothesis` when behavior is stateful or rule-based.
 - Add coverage checks (e.g., pytest-cov) and keep coverage green for new code paths.
 
+## Packaging
+- Structure the code as a releasable PyPI package.
+- Use a `pyproject.toml` with build metadata, versioning, and a `src/` layout.
+- Ensure imports and entrypoints work when installed from a wheel.
+
 ## Quality gates
 - For pre-commit hooks, run formatting last so lint fixes land before formatting.
 - Keep linting, type checking, and tests passing before closing work.
