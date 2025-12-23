@@ -8,6 +8,8 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    env:
+      SCRAPINGHUB_API_KEY: ${{ secrets.SCRAPINGHUB_API_KEY }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5

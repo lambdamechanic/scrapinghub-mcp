@@ -44,12 +44,11 @@ class LiveTools:
 
 
 def _require_api_key() -> str:
-    live_flag = os.environ.get("SCRAPINGHUB_MCP_LIVE")
-    if live_flag != "1":
-        pytest.skip("Set SCRAPINGHUB_MCP_LIVE=1 to enable live integration tests.")
+    if not os.environ.get("CI"):
+        pytest.skip("Live integration tests run only in CI.")
     api_key = os.environ.get("SCRAPINGHUB_API_KEY")
     if not api_key:
-        pytest.skip("SCRAPINGHUB_API_KEY is not set for live integration test.")
+        pytest.fail("SCRAPINGHUB_API_KEY is not set for live integration test.")
     assert api_key is not None
     return api_key
 
