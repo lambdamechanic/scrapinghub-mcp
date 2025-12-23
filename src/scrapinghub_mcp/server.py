@@ -246,14 +246,13 @@ def register_scrapinghub_tools(
             continue
 
         def tool_wrapper(
-            *args: Any,
             _method: Callable[..., Any] = method,
             _tool_name: str = tool_name,
             _method_name: str = method_name,
             **kwargs: Any,
         ) -> Any:
             try:
-                result = _method(*args, **kwargs)
+                result = _method(**kwargs)
             except Exception as exc:
                 logger.exception("tool.failed", tool=_tool_name, method=_method_name)
                 raise RuntimeError(f"Scrapinghub tool '{_tool_name}' failed.") from exc
