@@ -47,6 +47,10 @@ _ALLOWLIST_SCHEMA: dict[str, object] | None = None
 logger = structlog.get_logger(__name__)
 
 
+class ConfigError(RuntimeError):
+    """Represents user-facing configuration errors."""
+
+
 # TODO: Replace MCP-level schemas once scrapinghub.client.* exposes explicit type hints.
 # These models are temporary shims to provide tight schemas until upstream adds
 # typed params/returns.
@@ -888,7 +892,7 @@ def resolve_api_key() -> str:
         api_key = os.environ.get(API_KEY_ENV)
         if api_key:
             return api_key
-        raise RuntimeError(
+        raise ConfigError(
             f"Missing scrapinghub-mcp.toml and {API_KEY_ENV}. "
             f"Create scrapinghub-mcp.toml or set {API_KEY_ENV}. See {DOCS_URL} for setup."
         ) from None
@@ -906,7 +910,7 @@ def resolve_api_key() -> str:
     logger.info("auth.api_key.fallback", source="env")
     api_key = os.environ.get(API_KEY_ENV)
     if not api_key:
-        raise RuntimeError(
+        raise ConfigError(
             f"Missing API key in scrapinghub-mcp.toml and {API_KEY_ENV}. "
             f"Set auth.api_key or {API_KEY_ENV}. See {DOCS_URL} for setup."
         )
