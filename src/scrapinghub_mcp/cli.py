@@ -6,7 +6,7 @@ import sys
 
 import structlog
 
-from scrapinghub_mcp.server import build_server
+from scrapinghub_mcp.server import ConfigError, build_server
 
 logger = structlog.get_logger(__name__)
 
@@ -36,7 +36,11 @@ def main() -> int:
     _configure_logging()
     args = parse_args()
     logger.info("server.starting", allow_mutate=args.allow_mutate)
-    server = build_server(allow_mutate=args.allow_mutate)
+    try:
+        server = build_server(allow_mutate=args.allow_mutate)
+    except ConfigError as exc:
+        logger.warning("server.config.missing", message=str(exc))
+        return 1
     server.run(transport="stdio")
     logger.info("server.stopped")
     return 0
